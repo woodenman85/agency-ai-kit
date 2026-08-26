@@ -19,3 +19,6 @@ If either is missing, run the `agency-setup` skill before doing anything else.
   conversation. Drafting is not sending.
 - Credentials live in `.env` only. Never in `config/agency.json`, `BRAND.md`, or any
   committed file.
+- Before adding a feature, read `SCOPE.md`. This kit writes things and pushes them
+  into tools the agency already pays for. It does not host, syndicate, or store
+  candidate data, and those omissions are deliberate.

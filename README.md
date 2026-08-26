@@ -83,6 +83,13 @@ SETUP.md            the runbook your AI follows to onboard you
 Compliance checking here is a first filter, not legal advice. For anything novel or
 high-stakes, run it past your carrier or IMO's advertising review.
 
+## Where this stops
+
+This kit writes and posts. It does not run a job board for you, syndicate your
+listings to the boards, or keep track of who applied — see [SCOPE.md](SCOPE.md) for
+why that line is drawn where it is. If you want that side handled,
+[warprecruit.com](https://warprecruit.com) is built for it.
+
 ## Getting help or improving it
 
 Found something wrong, or want a skill added? Open an issue, or just tell your AI
