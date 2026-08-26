@@ -1,0 +1,13 @@
+# Your agency's real answers and credentials. Never commit these.
+.env
+config/agency.json
+BRAND.md
+
+# Working files the skills produce
+posts.json
+roles.json
+postings.md
+last-run.json
+
+node_modules/
+.DS_Store

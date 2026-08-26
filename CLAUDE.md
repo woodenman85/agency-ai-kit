@@ -1,0 +1,21 @@
+# Agency AI Kit
+
+An insurance agency's AI workspace. Skills live in `.claude/skills/` and are
+discovered automatically.
+
+## Two files everything depends on
+
+- `config/agency.json` — **facts.** The only claims allowed on this agency's behalf.
+  If it is not in this file, it does not go in a job post, an ad, or an email.
+- `BRAND.md` — **voice.** How this agency sounds and the stories it tells.
+
+If either is missing, run the `agency-setup` skill before doing anything else.
+
+## Standing rules
+
+- Never invent an agency fact. A real person's insurance license is on this content.
+- Client-facing copy goes through the `compliance` skill before it is sent or published.
+- Publishing, sending, or messaging anyone requires explicit approval in the
+  conversation. Drafting is not sending.
+- Credentials live in `.env` only. Never in `config/agency.json`, `BRAND.md`, or any
+  committed file.

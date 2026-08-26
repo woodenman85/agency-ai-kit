@@ -1,0 +1,35 @@
+{
+  "_comment": "Copy to agency.json and let the agency-setup skill fill it in. Everything here is what your AI is allowed to claim on your behalf. If it is not in this file, it does not go in a job post or an ad. Delete anything that is not true for your agency. NO PASSWORDS OR API KEYS IN THIS FILE — those go in .env.",
+
+  "agency_name": "The Example Life Agency",
+  "owner_name": "Jane Example",
+  "npn": "00000000",
+  "city": "Phoenix",
+  "state": "Arizona",
+  "licensed_states": "all 50 states",
+  "captive_or_independent": "independent",
+  "carrier_or_imo": "",
+
+  "products": ["term life", "whole life", "mortgage protection", "final expense", "IUL", "annuities"],
+  "provisions": [
+    "support completing state licensing coursework",
+    "multiple carriers to shop as an independent agency",
+    "one-on-one mentorship from the agency owner",
+    "CRM access"
+  ],
+  "leads": "Describe honestly, or delete this line. e.g. 'agents purchase direct-mail and digital leads' or 'warm inbound leads supplied at no cost'.",
+  "experience_required": false,
+  "licensing_note": "Coursework typically takes about two weeks; the agency walks candidates through it.",
+
+  "apply_url": "https://example.com/apply",
+  "candidate_phone": "(555) 555-5555",
+  "client_phone": "(555) 555-5556",
+  "business_sms_number": "",
+
+  "manatal_organization_id": 0,
+  "ghl_location_id": "",
+  "website_domain": "example.com",
+  "website_local_path": "",
+
+  "setup_completed": "2026-01-01"
+}
