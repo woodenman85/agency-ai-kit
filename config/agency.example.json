@@ -7,6 +7,8 @@
   "city": "Phoenix",
   "state": "Arizona",
   "licensed_states": "all 50 states",
+  "excluded_states": [],
+  "_excluded_states_note": "States to never post a job in, written exactly as they appear in scripts/cities.json (e.g. [\"New York\"]). Every posting bound for one is refused before it is sent, and bulk runs skip those cities entirely.",
   "captive_or_independent": "independent",
   "compliance_footer": "",
   "_compliance_footer_note": "Leave empty to use the standard footer. If your carrier or IMO requires specific advertising wording, paste their exact footer HTML here and it will be used verbatim instead.",

@@ -26,7 +26,10 @@ const ROLE_COUNT = Number(process.argv[2] || 10);
 const cfg = JSON.parse(read('config/agency.json'));
 const STANDARD = read('reference/writing-standard.md');
 const COMPLIANCE = read('reference/compliance.md');
-const cities = JSON.parse(read('scripts/cities.json')).slice(0, Number(process.argv[3] || 50));
+const excluded = new Set((cfg.excluded_states || []).map((x) => x.toLowerCase()));
+const cities = JSON.parse(read('scripts/cities.json'))
+  .filter((c) => !excluded.has((c.state || '').toLowerCase()))
+  .slice(0, Number(process.argv[3] || 50));
 
 const FOOTER = buildFooter(cfg);
 
