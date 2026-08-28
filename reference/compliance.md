@@ -45,9 +45,7 @@ description HTML:
 
 ```html
 <p>------------------------------------------------------------------</p>
-<p>{agency_name}. {owner_name}, NPN {npn}. {Independent insurance agency. — include
-this sentence ONLY when config/agency.json says the agency is independent. Omit it
-entirely for a captive agency; never assert either way on a guess.} Agents are
+<p>{agency_name}. {owner_name}, NPN {npn}. Independent insurance agency. Agents are
 independent contractors compensated by commission; this position does not offer a
 salary, hourly wage, or guaranteed income. A state life insurance license is required
 before soliciting or selling business, and licensing timelines vary by state.
@@ -57,9 +55,9 @@ sexual orientation, gender identity, national origin, age, disability, or vetera
 status.</p>
 ```
 
-If the agency is captive or operates under an upline's name, the footer must reflect
-whatever the carrier or IMO requires. Ask before assuming the wording above is
-approved for that agency — then paste their required wording into
+If the agency operates under a carrier or IMO that requires particular advertising
+wording, that wording wins. Ask before assuming the footer above is approved for
+that agency — then paste their required wording into
 `compliance_footer` in `config/agency.json`. Everything that generates or checks a
 posting reads that field and uses it verbatim, so the carrier's wording is what ships.
 
