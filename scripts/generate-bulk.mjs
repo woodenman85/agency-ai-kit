@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import { ROOT, requireKey } from './env.mjs';
+import { buildFooter } from './footer.mjs';
 
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
@@ -25,9 +26,12 @@ const ROLE_COUNT = Number(process.argv[2] || 10);
 const cfg = JSON.parse(read('config/agency.json'));
 const STANDARD = read('reference/writing-standard.md');
 const COMPLIANCE = read('reference/compliance.md');
-const cities = JSON.parse(read('scripts/cities.json')).slice(0, Number(process.argv[3] || 50));
+const excluded = new Set((cfg.excluded_states || []).map((x) => x.toLowerCase()));
+const cities = JSON.parse(read('scripts/cities.json'))
+  .filter((c) => !excluded.has((c.state || '').toLowerCase()))
+  .slice(0, Number(process.argv[3] || 50));
 
-const FOOTER = `<p>------------------------------------------------------------------</p>\n<p>${cfg.agency_name}. ${cfg.owner_name}, NPN ${cfg.npn}. Independent insurance agency. Agents are independent contractors compensated by commission; this position does not offer a salary, hourly wage, or guaranteed income. A state life insurance license is required before soliciting or selling business, and licensing timelines vary by state. Individual results depend on individual effort and are not guaranteed. Equal opportunity — we consider every applicant regardless of race, color, religion, sex, sexual orientation, gender identity, national origin, age, disability, or veteran status.</p>`;
+const FOOTER = buildFooter(cfg);
 
 const FACTS = `VERIFIED AGENCY FACTS — do not contradict these and do not invent beyond them:\n${JSON.stringify(cfg, null, 2)}`;
 

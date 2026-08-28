@@ -55,9 +55,11 @@ sexual orientation, gender identity, national origin, age, disability, or vetera
 status.</p>
 ```
 
-If the agency is captive or operates under an upline's name, the footer must reflect
-whatever the carrier or IMO requires. Ask before assuming the wording above is
-approved for that agency.
+If the agency operates under a carrier or IMO that requires particular advertising
+wording, that wording wins. Ask before assuming the footer above is approved for
+that agency — then paste their required wording into
+`compliance_footer` in `config/agency.json`. Everything that generates or checks a
+posting reads that field and uses it verbatim, so the carrier's wording is what ships.
 
 ## Before publishing
 
