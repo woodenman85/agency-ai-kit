@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, requireKey } from './env.mjs';
+import { footerMarker } from './footer.mjs';
 
 const key = requireKey('MANATAL_API_KEY', 'Get the key in Manatal: Settings -> Integrations -> Open API. It is account-wide, so treat it like a password.');
 
@@ -53,6 +54,7 @@ if (!fs.existsSync(postsPath)) { console.error('posts.json is missing. Write the
 const posts = JSON.parse(fs.readFileSync(postsPath, 'utf8'));
 
 // ── guard rails: refuse to send a posting that fails the basics ──────
+const footer = footerMarker(cfg);
 const problems = [];
 posts.forEach((p, i) => {
   const where = `posts.json[${i}] "${p.title || '(no title)'}"`;
@@ -61,7 +63,7 @@ posts.forEach((p, i) => {
   const d = p.description;
   if (!d.includes('1099')) problems.push(`${where}: description never says 1099`);
   if (!/commission/i.test(d)) problems.push(`${where}: no commission word — a board validator will reject it`);
-  if (!/NPN/i.test(d)) problems.push(`${where}: compliance footer is missing`);
+  if (!d.toLowerCase().includes(footer.needle.toLowerCase())) problems.push(`${where}: missing ${footer.label}`);
   if (!d.includes('<h3>')) problems.push(`${where}: no <h3> sections — see reference/writing-standard.md`);
   if (p.city && new RegExp(p.city, 'i').test(p.title)) problems.push(`${where}: city belongs in the city field, not the title`);
   if (/\$\s?\d|\d{2,3}\s?k\b/i.test(d.replace(/<[^>]+>/g, ''))) problems.push(`${where}: contains what looks like a pay figure — read reference/compliance.md`);
@@ -74,18 +76,37 @@ if (problems.length) {
 
 // ── dedupe against what already exists ───────────────────────────────
 const existing = await allJobs();
-const seen = new Set(existing.map((j) => `${j.position_name}|${j.city || ''}`.toLowerCase()));
-const fresh = posts.filter((p) => !seen.has(`${p.title}|${p.city || ''}`.toLowerCase()));
-const skipped = posts.length - fresh.length;
+const key_ = (name, city) => `${name}|${city || ''}`.toLowerCase();
+const byKey = new Map(existing.map((j) => [key_(j.position_name, j.city), j]));
+
+const fresh = posts.filter((p) => !byKey.has(key_(p.title, p.city)));
+// Postings that already exist as unpublished drafts. With --publish these get
+// PATCHed live rather than silently skipped as duplicates.
+const drafts = posts
+  .map((p) => byKey.get(key_(p.title, p.city)))
+  .filter((j) => j && !j.is_published);
+const alreadyLive = posts.length - fresh.length - drafts.length;
 
 console.log(`${posts.length} posting(s) in posts.json`);
-if (skipped) console.log(`${skipped} already exist in Manatal — skipping those`);
+if (alreadyLive) console.log(`${alreadyLive} already published in Manatal — leaving alone`);
+if (drafts.length) console.log(`${drafts.length} already exist as drafts${PUBLISH ? ' — will be PUBLISHED' : ' — add --publish to publish them'}`);
 console.log(`${fresh.length} to create${LIVE ? (PUBLISH ? ' and PUBLISH publicly' : ' as unpublished drafts') : ''}\n`);
 
 if (!LIVE) {
   for (const p of fresh) console.log(`  would create: ${p.title}  (${p.city || 'no city'}, ${p.state || '-'})`);
+  if (PUBLISH) for (const j of drafts) console.log(`  would publish existing draft ${j.id}: ${j.position_name}  (${j.city || 'no city'})`);
   console.log('\nDry run — nothing was sent. Add --live to create drafts, --live --publish to go public.');
   process.exit(0);
+}
+
+// ── publish drafts that already exist ────────────────────────────────
+let published = 0;
+if (PUBLISH && drafts.length) {
+  for (const j of drafts) {
+    const res = await api(`jobs/${j.id}/`, { method: 'PATCH', body: JSON.stringify({ is_published: true }) });
+    if (res.ok) { published++; console.log(`  published  ${j.position_name} -> ${j.career_page_url}`); }
+    else console.log(`  FAILED to publish ${j.id} ${j.position_name}: HTTP ${res.status}`);
+  }
 }
 
 // ── send, in small batches ───────────────────────────────────────────
@@ -119,5 +140,9 @@ for (let i = 0; i < fresh.length; i += 5) {
   if (i + 5 < fresh.length) await new Promise((r) => setTimeout(r, 1200));
 }
 
-console.log(`\n${created.length} created${PUBLISH ? ' and live' : ' as drafts (publish them in Manatal or re-run with --publish)'}.`);
+const summary = [];
+if (created.length) summary.push(`${created.length} created${PUBLISH ? ' and live' : ' as drafts'}`);
+if (published) summary.push(`${published} existing draft(s) published`);
+console.log(`\n${summary.join(', ') || 'Nothing to do'}.`);
+if (created.length && !PUBLISH) console.log('They are not public yet. Publish them in Manatal, or re-run the same command with --publish.');
 if (created.length) fs.writeFileSync(path.join(ROOT, 'last-run.json'), JSON.stringify(created.map((j) => ({ id: j.id, title: j.position_name, url: j.career_page_url })), null, 2));

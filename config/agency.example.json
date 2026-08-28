@@ -8,6 +8,8 @@
   "state": "Arizona",
   "licensed_states": "all 50 states",
   "captive_or_independent": "independent",
+  "compliance_footer": "",
+  "_compliance_footer_note": "Leave empty to use the standard footer. If your carrier or IMO requires specific advertising wording, paste their exact footer HTML here and it will be used verbatim instead.",
   "carrier_or_imo": "",
 
   "products": ["term life", "whole life", "mortgage protection", "final expense", "IUL", "annuities"],
