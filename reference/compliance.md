@@ -59,6 +59,35 @@ If the agency is captive or operates under an upline's name, the footer must ref
 whatever the carrier or IMO requires. Ask before assuming the wording above is
 approved for that agency.
 
+## Board eligibility is a separate question
+
+Everything above is about what you may *say*. Job boards also restrict what you
+may *post at all* — notably, they reject commission-only roles as a compensation
+model, regardless of wording. That is not a compliance problem and it is never
+fixed by editing the copy. See `job-board-eligibility.md`.
+
+The two rulebooks collide on exactly one point: this file requires the
+commission-only disclosure, and the boards reject the model it discloses. The
+disclosure always wins. Route the posting elsewhere instead.
+
+### The one narrow exception on numbers
+
+A **substantiated commission estimate** in a structured, explicitly-labeled
+field — Warp Recruit's `commission_estimate`, which renders "Est. … (commission,
+not guaranteed)" and never reaches Google's `baseSalary` — is a different object
+from a dollar figure in prose, and is permitted where the system can express the
+qualifier.
+
+It requires a written basis: a real commission schedule or real producer
+earnings records, with the production assumptions stated. An expectation is not
+a basis. And it must be the same figure on every posting — a range that varies
+per posting is not derived from data, and the variation is what makes it
+indefensible.
+
+This exception never extends to body copy. A number in the description of a
+commission-only role is an income claim, and `post-jobs.mjs` blocks it with no
+override.
+
 ## Before publishing
 
 Run this check on every posting:

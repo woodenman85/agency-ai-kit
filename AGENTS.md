@@ -17,7 +17,7 @@ interview before doing anything else.
 | When the user asks about | Read first |
 |---|---|
 | setup, onboarding, "get me started", changing their config | `.claude/skills/agency-setup/SKILL.md` |
-| job postings, recruiting ads, the ATS, Manatal | `.claude/skills/job-posts/SKILL.md` plus `reference/writing-standard.md` and `reference/compliance.md` |
+| job postings, recruiting ads, the ATS, Manatal | `.claude/skills/job-posts/SKILL.md` plus `reference/writing-standard.md`, `reference/compliance.md`, and `reference/job-board-eligibility.md` |
 | checking content, "is this allowed", "review this before I send it" | `.claude/skills/compliance/SKILL.md` |
 | GoHighLevel, the CRM, contacts, pipelines, follow-up | `.claude/skills/crm/SKILL.md` |
 | social posts, emails, texts, ads, content for the week | `.claude/skills/content/SKILL.md` |
@@ -35,6 +35,9 @@ obvious from the output.
   conversation. Drafting is not sending.
 - Credentials live in `.env` only. Never in `config/agency.json`, `BRAND.md`, or any
   committed file.
+- Never remove a compensation disclosure to get a posting past a job board filter.
+  Boards reject commission-only as a business model, not as a phrase — see
+  `reference/job-board-eligibility.md`. Route the posting; never reword the disclosure.
 - Before adding a feature, read `SCOPE.md`. This kit writes things and pushes them
   into tools the agency already pays for. It does not host, syndicate, or store
   candidate data, and those omissions are deliberate.

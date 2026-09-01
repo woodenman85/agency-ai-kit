@@ -2,26 +2,31 @@
 // Verifies the Manatal token and prints what the account looks like.
 //
 //   node scripts/check-manatal.mjs
-import { requireKey } from './env.mjs';
-const key = requireKey('MANATAL_API_KEY', 'Get the key in Manatal: Settings -> Integrations -> Open API. It is account-wide, so treat it like a password.');
+import { client, die, allJobs } from './manatal.mjs';
 
-const api = (p) => fetch(`https://api.manatal.com/open/v3/${p}`, { headers: { Authorization: `Token ${key}` } });
+const api = client();
 
-const orgRes = await api('organizations/?page_size=20');
-if (orgRes.status === 401 || orgRes.status === 403) {
-  console.error(`Token rejected (HTTP ${orgRes.status}). Regenerate the key in Manatal and export it again.`);
-  process.exit(1);
-}
-if (!orgRes.ok) { console.error(`Manatal returned HTTP ${orgRes.status}`); process.exit(1); }
-const orgs = await orgRes.json();
+try {
+  const orgs = await (await api('organizations/?page_size=20')).json();
 
-console.log('Token works.\n');
-console.log('Organizations (put the right id in config/agency.json as manatal_organization_id):');
-for (const o of orgs.results) console.log(`  ${o.id}  ${o.name}`);
+  console.log('Token works.\n');
+  console.log('Organizations (put the right id in config/agency.json as manatal_organization_id):');
+  for (const o of orgs.results) console.log(`  ${o.id}  ${o.name}`);
 
-const jobs = await (await api('jobs/?page_size=1')).json();
-console.log(`\nJobs in this account: ${jobs.count}`);
-if (jobs.results[0]) {
-  const slug = (jobs.results[0].career_page_url || '').split('/job/')[0];
-  if (slug) console.log(`Careers page: ${slug}`);
+  const jobs = await (await api('jobs/?page_size=1')).json();
+  console.log(`\nJobs in this account: ${jobs.count}`);
+  if (jobs.results[0]) {
+    const slug = (jobs.results[0].career_page_url || '').split('/job/')[0];
+    if (slug) console.log(`Careers page: ${slug}`);
+  }
+
+  // A working token says nothing about whether the free job board will accept
+  // a posting — that is a separate, per-account permission that Trust & Safety
+  // can pull without affecting the API at all. Say so, so a green check here is
+  // never mistaken for "publishing is fine".
+  console.log('\nNote: this only proves the API token works. It does not prove the free job');
+  console.log('board will accept a posting — that is a separate account permission.');
+  console.log('See reference/job-board-eligibility.md before publishing.');
+} catch (err) {
+  die(err);
 }

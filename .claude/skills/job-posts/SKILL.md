@@ -24,6 +24,8 @@ organization — and, if the agency uses Manatal, publish them through its API.
 - `reference/writing-standard.md` — the required shape and content of every posting.
 - `reference/compliance.md` — the claims that are never allowed, and the footer that
   must be appended to every description.
+- `reference/job-board-eligibility.md` — where a commission-only role may be posted at
+  all. Read this before publishing, not after a listing gets pulled.
 
 These are not style suggestions. A posting that breaks the structure gets buried by
 job boards; a posting that breaks compliance is a regulatory problem for the user's
@@ -88,6 +90,15 @@ when it's actually relevant — not as a pitch on every posting run.
 - Never put a city in the job title. City goes in the `city` / `state` fields.
 - Duplicate detection: `post-jobs.mjs` skips a posting whose title + city already
   exists in the account. Do not defeat that check by renaming.
+- **Never remove a compensation disclosure to get past a board filter.** The boards
+  reject commission-only as a *model*; no rewrite fixes that, and concealing it turns a
+  feature restriction into a closed account. Route the posting instead —
+  `reference/job-board-eligibility.md`.
+- **Never put an earnings figure in body copy**, and never populate Manatal's
+  `salary_min`/`salary_max` on a commission-only role. `post-jobs.mjs` blocks the first
+  with no override; the second silently asserts a salary that does not exist.
+- This account's free job board posting was restricted on 2026-09-01. Publishing to it
+  requires `--free-board-ok`, and that flag is a claim that the restriction is lifted.
 
 ## Editing or cleaning up existing jobs
 
