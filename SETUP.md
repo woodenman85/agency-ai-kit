@@ -21,6 +21,22 @@ the optional bulk city generator.
 
 ## Step 2 — create their files
 
+On a Mac, credentials go in the **Keychain** — encrypted at rest, unlocked by
+their login, never a readable file on disk:
+
+```bash
+node scripts/credentials.mjs list
+```
+
+That prints every credential the kit uses and whether it is set. Store one with
+`node scripts/credentials.mjs set MANATAL_API_KEY` — it prompts, and the value
+is never echoed, never in shell history, never in the process list.
+
+If they already have a `.env`, `node scripts/credentials.mjs import` moves it
+into the Keychain in one step.
+
+On Linux or in a cloud session there is no Keychain, so use the file instead:
+
 ```bash
 cp .env.example .env
 ```
@@ -42,7 +58,8 @@ Walk them through each one they said yes to. Paste-ready click paths:
 > Log in to Manatal → the gear icon → Settings → Integrations → Open API → Generate.
 > Copy the key immediately; Manatal only shows it once.
 
-Then add it to `.env` as `MANATAL_API_KEY=...` and run `node scripts/check-manatal.mjs`.
+Then store it: `node scripts/credentials.mjs set MANATAL_API_KEY` (or add it to `.env`),
+and run `node scripts/check-manatal.mjs`.
 It prints their organization id — put that in `config/agency.json` as
 `manatal_organization_id`.
 
@@ -51,15 +68,16 @@ It prints their organization id — put that in `config/agency.json` as
 > the scopes for contacts, opportunities, calendars, and conversations → Create.
 > The token starts with `pit-`.
 
-Add it to `.env` as `GHL_API_KEY=...`. Their Location ID is in the browser URL after
+Store it: `node scripts/credentials.mjs set GHL_API_KEY` (or add it to `.env`). Their Location ID is in the browser URL after
 `/location/`. That goes in `config/agency.json` as `ghl_location_id`.
 
 **Website FTP**
 > Hosting control panel → Files → FTP Accounts. Host, username, and password.
 
-Add them to `.env` as `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`.
+Store them as `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD` — via `credentials.mjs set` or `.env`.
 
-Say out loud, once, that `.env` is git-ignored and their keys stay on their computer.
+Say out loud, once, that their keys stay on their computer — in the Keychain, or in
+`.env`, which is git-ignored.
 People are right to be nervous about pasting an API key into a chat window, and they
 should hear the answer rather than have to ask.
 
@@ -86,7 +104,8 @@ lines or fewer. Then stop.
   lead program that does not exist, or an invented "paid training" is a licensing
   problem for a real person.
 - **Never publish anything during setup.** Not a job post, not a page, not a message.
-- **Credentials only ever go in `.env`.** Never in `config/agency.json`, never in
-  `BRAND.md`, never in a file that gets committed.
+- **Credentials only ever go in the Keychain or `.env`.** Never in
+  `config/agency.json`, never in `BRAND.md`, never in a file that gets committed,
+  and never pasted into an email or a support ticket.
 - If they get stuck or bored, save progress and give them one sentence on how to
   resume. Half a setup is recoverable; a person who gave up is not.

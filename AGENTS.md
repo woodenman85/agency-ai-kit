@@ -33,8 +33,9 @@ obvious from the output.
 - Client-facing copy goes through the compliance check before it is sent or published.
 - Publishing, sending, or messaging anyone requires explicit approval in the
   conversation. Drafting is not sending.
-- Credentials live in `.env` only. Never in `config/agency.json`, `BRAND.md`, or any
-  committed file.
+- Credentials live in the macOS Keychain (`node scripts/credentials.mjs set NAME`) or,
+  where there is no Keychain, in `.env`. Never in `config/agency.json`, `BRAND.md`, or
+  any committed file — and never pasted into an email or a support ticket.
 - Never remove a compensation disclosure to get a posting past a job board filter.
   Boards reject commission-only as a business model, not as a phrase — see
   `reference/job-board-eligibility.md`. Route the posting; never reword the disclosure.
