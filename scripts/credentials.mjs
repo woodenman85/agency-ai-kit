@@ -41,18 +41,56 @@ function requireMac() {
   process.exit(1);
 }
 
-/** Store a secret. The value is NOT passed on the command line — `security`
- *  prompts for it and reads without echo, so it never appears in `ps` output
- *  or in your shell history. -U updates an existing item instead of failing. */
-function keychainSet(name) {
-  execFileSync('security', ['add-generic-password', '-U', '-s', KEYCHAIN_SERVICE, '-a', name], {
-    stdio: 'inherit',
+/** Read a secret from the terminal without echoing it.
+ *
+ *  This is here because `security add-generic-password` does NOT prompt when
+ *  -w is omitted, contrary to what the flag's description suggests. It creates
+ *  the item with an empty password and exits 0 — so the first version of this
+ *  script appeared to hang-then-fail, and would have left a broken empty
+ *  Keychain entry behind if `set` were not verifying the value afterward.
+ *
+ *  Raw mode delivers a paste as one chunk, so iterate characters rather than
+ *  treating each data event as a single keystroke. */
+function promptSecret(label) {
+  return new Promise((resolve, reject) => {
+    const stdin = process.stdin;
+    if (!stdin.isTTY) {
+      reject(new Error('Not an interactive terminal — run this directly in Terminal.'));
+      return;
+    }
+    process.stdout.write(label);
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+
+    let buf = '';
+    const done = (fn) => {
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdin.removeListener('data', onData);
+      process.stdout.write('\n');
+      fn();
+    };
+    const onData = (chunk) => {
+      for (const ch of chunk) {
+        // Enter (CR/LF) or ctrl-D ends the entry.
+        if (ch === '\r' || ch === '\n' || ch === '\u0004') return done(() => resolve(buf));
+        if (ch === '\u0003') return done(() => process.exit(130)); // ctrl-C
+        if (ch === '\u007f' || ch === '\b') buf = buf.slice(0, -1); // backspace
+        else if (ch >= ' ') buf += ch; // ignore other control chars
+      }
+    };
+    stdin.on('data', onData);
   });
 }
 
-/** Same, but with the value supplied. Only used by `import`, where the secret
- *  is already sitting in a plaintext file anyway. It is briefly visible in the
- *  process list, which is why interactive `set` does not do this. */
+/** Write a secret into the login Keychain.
+ *
+ *  The value goes through argv, which is briefly visible to `ps` for other
+ *  processes running as you. `security` offers no way to read it from stdin,
+ *  so the alternative is not a safer write but no Keychain support at all —
+ *  and the thing it replaces is a plaintext file that sits there permanently.
+ *  -U updates an existing item instead of failing on a duplicate. */
 function keychainSetValue(name, value) {
   execFileSync(
     'security',
@@ -78,9 +116,21 @@ switch (cmd) {
       process.exit(1);
     }
     console.log(`Storing ${arg} in your Keychain (service: ${KEYCHAIN_SERVICE}).`);
-    console.log('Paste the value at the prompt — it will not be shown as you type.\n');
+
+    let value;
     try {
-      keychainSet(arg);
+      value = (await promptSecret(`Paste ${arg} (nothing will appear as you type), then press return: `)).trim();
+    } catch (err) {
+      console.error(`\n${err.message}`);
+      process.exit(1);
+    }
+    if (!value) {
+      console.error('Nothing entered. Nothing was changed.');
+      process.exit(1);
+    }
+
+    try {
+      keychainSetValue(arg, value);
     } catch {
       console.error(`\nCould not store ${arg}. Nothing was changed.`);
       process.exit(1);
@@ -90,6 +140,10 @@ switch (cmd) {
     const stored = keychainGet(arg);
     if (!stored) {
       console.error(`\n${arg} did not save. Try again.`);
+      process.exit(1);
+    }
+    if (stored !== value) {
+      console.error(`\n${arg} saved, but reads back different from what was entered. Check for a stray space.`);
       process.exit(1);
     }
     console.log(`\n${arg} saved: ${mask(stored)}`);
