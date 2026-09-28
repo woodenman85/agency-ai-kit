@@ -8,6 +8,7 @@ posts.json
 roles.json
 postings.md
 last-run.json
+.applicant-sync-state.json
 
 node_modules/
 .DS_Store
