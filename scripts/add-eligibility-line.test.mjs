@@ -1,0 +1,48 @@
+// Tests the eligibility-line insert against the description shapes actually
+// present in the live Manatal account. Run: node scripts/add-eligibility-line.test.mjs
+import { addLine, verify, LINE } from './add-eligibility-line.mjs';
+
+const QUALIFICATIONS =
+  '<p>intro</p><h3>What you will do</h3><ul><li>call people</li></ul>' +
+  '<h3>Qualifications</h3><ul><li>A state life insurance license, or a clear plan to earn one</li>' +
+  '<li>Reliable home office setup</li></ul>' +
+  '<h3>Compensation</h3><p>This is a 1099 independent contractor position. Earnings are based on individual production.</p>' +
+  '<p>Equal opportunity to all applicants.</p>';
+
+// The other heading used across the account.
+const WHO_FIT = QUALIFICATIONS.replace('<h3>Qualifications</h3>', '<h3>Who this is a fit for</h3>');
+
+let failures = 0;
+const check = (label, cond) => {
+  console.log(`  ${cond ? 'pass' : 'FAIL'}  ${label}`);
+  if (!cond) failures++;
+};
+
+for (const [name, html] of [['Qualifications heading', QUALIFICATIONS], ['Who this is a fit for heading', WHO_FIT]]) {
+  console.log(`\n${name}`);
+  const r = addLine(html);
+  if (!r.ok) { console.log(`  FAIL  refused: ${r.reason}`); failures++; continue; }
+  check('verify() reports no problems', verify(html, r.html).length === 0);
+  check('line is the FIRST bullet in the list', /<ul><li>Legally authorized to work in the United States<\/li>/.test(r.html));
+  check('the existing first bullet still follows it',
+    r.html.includes(`${LINE}<li>A state life insurance license`));
+  check('compensation section untouched',
+    /Earnings are based on individual production\./.test(r.html) && !/commission/i.test(r.html));
+  check('EEO paragraph untouched', /Equal opportunity to all applicants\./.test(r.html));
+  check('grew by exactly the inserted line', r.html.length === html.length + LINE.length);
+  check('re-running is a no-op', addLine(r.html).ok === false);
+}
+
+console.log('\nEdge cases');
+check('refuses a description with neither heading', addLine('<p>nothing</p>').ok === false);
+check('refuses an empty description', addLine('').ok === false);
+check('refuses one that already mentions work authorization',
+  addLine('<h3>Qualifications</h3><ul><li>Authorized to work in the US</li></ul>').ok === false);
+check('verify() catches a duplicated line',
+  verify(QUALIFICATIONS, QUALIFICATIONS + LINE + LINE).some((p) => /more than once/.test(p)));
+check('verify() catches an unrelated edit',
+  verify(QUALIFICATIONS, QUALIFICATIONS.replace('Reliable home office setup', 'Something else entirely!!') + LINE)
+    .length > 0);
+
+console.log(failures ? `\n${failures} FAILURE(S)` : '\nall passed');
+process.exit(failures ? 1 : 0);
