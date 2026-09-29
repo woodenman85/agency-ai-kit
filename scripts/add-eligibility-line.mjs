@@ -38,26 +38,43 @@ const ONLY = valueOf('--only');
 
 export const LINE = '<li>Legally authorized to work in the United States</li>';
 
-/** Postings use one of two headings for the requirements section, so match
- *  either and insert immediately after its opening <ul>. Verified against the
- *  live account: every posting uses one or the other. */
-const HEADING = /(<h3>\s*(?:Qualifications|Who this is a fit for)\s*<\/h3>\s*<ul>)/i;
+/** The same requirement as a sentence, for postings built on a different
+ *  skeleton — see SENTENCE_TARGET below. */
+export const SENTENCE = ' Applicants must be legally authorized to work in the United States.';
+
+/** Most postings put requirements in a list under one of two headings. */
+const LIST_HEADING = /(<h3>\s*(?:Qualifications|Who this is a fit for)\s*<\/h3>\s*<ul>)/i;
+
+/** Six postings use an older skeleton with no requirements list at all — its
+ *  sections are What You'll Do / What We Provide / Licensing Requirement /
+ *  Compensation. The first pass skipped every one of them and reported it, and
+ *  the skip went unnoticed because nobody read the output. Licensing Requirement
+ *  is the right home for this: it is already the paragraph about what a
+ *  candidate must be able to do before selling. */
+const SENTENCE_TARGET = /(<h3>\s*Licensing Requirement\s*<\/h3>\s*<p>[^<]*?)(<\/p>)/i;
 
 export function addLine(html) {
   if (!html) return { ok: false, reason: 'empty description' };
   if (/authorized to work/i.test(html)) return { ok: false, reason: 'already has the line' };
-  if (!HEADING.test(html)) return { ok: false, reason: 'no Qualifications / Who this is a fit for list' };
-  return { ok: true, html: html.replace(HEADING, `$1${LINE}`) };
+  if (LIST_HEADING.test(html)) {
+    return { ok: true, html: html.replace(LIST_HEADING, `$1${LINE}`), added: LINE };
+  }
+  if (SENTENCE_TARGET.test(html)) {
+    return { ok: true, html: html.replace(SENTENCE_TARGET, `$1${SENTENCE}$2`), added: SENTENCE };
+  }
+  return { ok: false, reason: 'no requirements list and no Licensing Requirement paragraph' };
 }
 
 /** Refuse anything that changed more than it should have. Runs against live
  *  postings, so a silent regression is expensive. */
-export function verify(before, after) {
+export function verify(before, after, added = LINE) {
   const problems = [];
-  if (!after.includes(LINE)) problems.push('the line is not present');
-  if ((after.match(/authorized to work/gi) || []).length !== 1) problems.push('the line appears more than once');
-  if (after.length !== before.length + LINE.length) problems.push('something other than the inserted line changed');
-  if (!after.endsWith(before.slice(-120))) problems.push('the tail of the description changed');
+  if (!after.includes(added)) problems.push('the requirement is not present');
+  if ((after.match(/authorized to work/gi) || []).length !== 1) problems.push('it appears more than once');
+  if (after.length !== before.length + added.length) problems.push('something other than the inserted text changed');
+  // The sentence variant inserts mid-document, so only the list variant leaves
+  // the tail byte-identical.
+  if (added === LINE && !after.endsWith(before.slice(-120))) problems.push('the tail of the description changed');
   return problems;
 }
 
@@ -74,7 +91,7 @@ if (RUN_DIRECTLY) {
   for (const j of jobs) {
     const r = addLine(j.description || '');
     if (!r.ok) { skipped.set(r.reason, (skipped.get(r.reason) ?? 0) + 1); continue; }
-    const problems = verify(j.description, r.html);
+    const problems = verify(j.description, r.html, r.added);
     if (problems.length) { skipped.set(problems.join('; '), (skipped.get(problems.join('; ')) ?? 0) + 1); continue; }
     planned.push({ job: j, html: r.html });
   }
@@ -87,7 +104,7 @@ if (RUN_DIRECTLY) {
 
   if (!LIVE) {
     const { job, html } = planned[0];
-    const at = html.search(HEADING);
+    const at = Math.max(0, html.search(/<h3>\s*(?:Qualifications|Who this is a fit for|Licensing Requirement)\s*<\/h3>/i));
     console.log(`Example — job ${job.id} "${job.position_name}"\n`);
     console.log('  ' + html.slice(at, at + 300) + '…\n');
     console.log(`Dry run — nothing was sent. Add --live to apply to ${planned.length} posting(s).`);

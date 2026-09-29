@@ -1,6 +1,6 @@
 // Tests the eligibility-line insert against the description shapes actually
 // present in the live Manatal account. Run: node scripts/add-eligibility-line.test.mjs
-import { addLine, verify, LINE } from './add-eligibility-line.mjs';
+import { addLine, verify, LINE, SENTENCE } from './add-eligibility-line.mjs';
 
 const QUALIFICATIONS =
   '<p>intro</p><h3>What you will do</h3><ul><li>call people</li></ul>' +
@@ -33,8 +33,29 @@ for (const [name, html] of [['Qualifications heading', QUALIFICATIONS], ['Who th
   check('re-running is a no-op', addLine(r.html).ok === false);
 }
 
+// The skeleton the first pass silently skipped on six live postings: no
+// requirements list at all, just a Licensing Requirement paragraph.
+console.log('\nRustman-style skeleton (no requirements list)');
+{
+  const html =
+    "<p>intro</p><h3>What You'll Do</h3><ul><li>call people</li></ul>" +
+    '<h3>What We Provide</h3><ul><li>training</li></ul>' +
+    '<h3>Licensing Requirement</h3><p>A state Life &amp; Health license is required before selling. ' +
+    'Unlicensed candidates may apply and must be licensed before any sales activity.</p>' +
+    '<h3>Compensation</h3><p>This is a 1099 independent contractor position. Earnings are based on individual production.</p>';
+  const r = addLine(html);
+  check('is handled rather than skipped', r.ok);
+  check('uses the sentence form, not a stray <li>', r.ok && r.added === SENTENCE && !r.html.includes(LINE));
+  check('lands inside the Licensing Requirement paragraph',
+    r.ok && /sales activity\. Applicants must be legally authorized to work in the United States\.<\/p>/.test(r.html));
+  check('verify() passes', r.ok && verify(html, r.html, r.added).length === 0);
+  check('compensation section untouched',
+    r.ok && /Earnings are based on individual production\./.test(r.html));
+  check('re-running is a no-op', r.ok && addLine(r.html).ok === false);
+}
+
 console.log('\nEdge cases');
-check('refuses a description with neither heading', addLine('<p>nothing</p>').ok === false);
+check('refuses a description with no requirements list and no licensing paragraph', addLine('<p>nothing</p>').ok === false);
 check('refuses an empty description', addLine('').ok === false);
 check('refuses one that already mentions work authorization',
   addLine('<h3>Qualifications</h3><ul><li>Authorized to work in the US</li></ul>').ok === false);
