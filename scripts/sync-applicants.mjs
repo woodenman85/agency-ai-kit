@@ -134,14 +134,34 @@ try {
 }
 
 // ── job titles come from the match object, not the candidate ─────────
+// The job list is what makes a fast schedule expensive: 255 jobs is 6 requests,
+// and re-fetching them every run to translate an id into a title that changed
+// last month is most of the traffic. Cached in the state file and refreshed
+// hourly — or immediately when a match points at a job we have never seen,
+// which is the only case where a stale cache would actually be wrong.
+const JOB_CACHE_MS = 60 * 60 * 1000;
+
 const jobTitleByCandidate = new Map();
 try {
   const matches = await collect('matches/', filter);
-  const jobs = await collect('jobs/', {});
-  const titleById = new Map(jobs.map((j) => [j.id, j.position_name]));
+
+  let titleById = new Map(Object.entries(state.jobTitles ?? {}).map(([k, v]) => [Number(k), v]));
+  const cacheAge = Date.now() - new Date(state.jobTitlesAt ?? 0).getTime();
+  const needed = matches.map((m) => m.job_id).filter((id) => id != null);
+  const unknown = needed.some((id) => !titleById.has(Number(id)));
+
+  if (!titleById.size || cacheAge > JOB_CACHE_MS || unknown) {
+    const jobs = await collect('jobs/', {});
+    titleById = new Map(jobs.map((j) => [j.id, j.position_name]));
+    state.jobTitles = Object.fromEntries(titleById);
+    state.jobTitlesAt = new Date().toISOString();
+  }
+
   for (const m of matches) {
     const cid = m.candidate_id ?? m.candidate?.id;
-    if (cid != null && m.job_id != null) jobTitleByCandidate.set(cid, titleById.get(m.job_id) ?? `job ${m.job_id}`);
+    if (cid != null && m.job_id != null) {
+      jobTitleByCandidate.set(cid, titleById.get(Number(m.job_id)) ?? `job ${m.job_id}`);
+    }
   }
 } catch {
   // Not fatal. An applicant with no job title attached is still an applicant,
@@ -157,6 +177,10 @@ console.log(`${candidates.length} candidate(s) found${skipped ? `, ${skipped} al
 console.log(`${fresh.length} to send\n`);
 
 if (!fresh.length) {
+  // Persist a refreshed job-title cache even on a quiet run. Most scheduled
+  // runs find nothing, so exiting here without saving would mean the cache is
+  // rebuilt from scratch every single time — the exact cost it exists to avoid.
+  if (LIVE) writeState({ ...state, lastRun: new Date().toISOString() });
   console.log('Nothing new.');
   process.exit(0);
 }
@@ -269,6 +293,7 @@ for (const c of fresh) {
 // newest SENT record, not the newest record seen.
 const newestSent = fresh.filter((c) => sent.has(c.id)).map((c) => c.created_at).filter(Boolean).sort().pop();
 writeState({
+  ...state, // keeps the cached job titles; rebuilding them every run is the cost this avoids
   lastRun: new Date().toISOString(),
   lastCreatedAt: newestSent || state.lastCreatedAt || null,
   sentIds: [...sent].slice(-5000),
