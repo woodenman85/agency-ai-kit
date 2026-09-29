@@ -26,7 +26,8 @@ const KNOWN = [
   ['FTP_HOST', 'Website FTP host'],
   ['FTP_USER', 'Website FTP user'],
   ['FTP_PASSWORD', 'Website FTP password'],
-  ['GHL_APPLICANT_WEBHOOK_URL', 'GoHighLevel — Automation -> Workflows -> Inbound Webhook trigger URL'],
+  ['GHL_LOCATION_ID', 'GoHighLevel — Settings -> Business Profile (also in the browser URL)'],
+  ['GHL_APPLICANT_WEBHOOK_URL', 'GoHighLevel — only for --via webhook; that trigger bills $0.01 each'],
   ['ANTHROPIC_API_KEY', 'Optional — only for 100+ city bulk generation'],
 ];
 

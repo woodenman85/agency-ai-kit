@@ -48,17 +48,59 @@ if (has('--reset')) {
 
 const state = readState();
 
-// The webhook URL is a credential: anyone holding it can inject contacts into
-// the CRM, so it belongs with the keys, not in a committed file.
-const webhook = LIVE
-  ? getKey('GHL_APPLICANT_WEBHOOK_URL') ||
-    (console.error(
+// ── delivery mode ────────────────────────────────────────────────────
+// GoHighLevel's Inbound Webhook is a PREMIUM trigger: $0.01 per execution,
+// with 100 free executions per sub-account, ever. At the observed rate of ~39
+// applicants a day that allowance is gone in under three days and the steady
+// cost is roughly $12/month — for moving a contact the API moves for nothing.
+//
+// The Contacts API has no per-execution charge. Writing the contact directly
+// and tagging it lets a "Contact Tag" workflow trigger — a STANDARD trigger,
+// not billed — start the recruiting sequence. Same result, same speed, no
+// meter. So that is the default, and the webhook stays available because it
+// needs no API key and is easier to stand up in a hurry.
+const MODE = (valueOf('--via') || 'api').toLowerCase();
+if (!['api', 'webhook'].includes(MODE)) {
+  console.error(`Unknown --via ${MODE}. Use "api" (default, free) or "webhook" (premium, $0.01 each).`);
+  process.exit(1);
+}
+
+const GHL_API = 'https://services.leadconnectorhq.com';
+const TAG = 'manatal-applicant';
+
+let webhook = null;
+let ghlToken = null;
+let ghlLocation = null;
+
+if (LIVE && MODE === 'webhook') {
+  webhook = getKey('GHL_APPLICANT_WEBHOOK_URL');
+  if (!webhook) {
+    console.error(
       'GHL_APPLICANT_WEBHOOK_URL is not set.\n\n' +
         'In GoHighLevel: Automation -> Workflows -> create a workflow -> add the\n' +
         '"Inbound Webhook" trigger -> copy the URL it gives you. Then:\n\n' +
-        '  node scripts/credentials.mjs set GHL_APPLICANT_WEBHOOK_URL\n',
-    ), process.exit(1))
-  : null;
+        '  node scripts/credentials.mjs set GHL_APPLICANT_WEBHOOK_URL\n\n' +
+        'Note: that trigger bills $0.01 per applicant. --via api costs nothing.',
+    );
+    process.exit(1);
+  }
+}
+
+if (LIVE && MODE === 'api') {
+  ghlToken = getKey('GHL_API_KEY');
+  ghlLocation = getKey('GHL_LOCATION_ID');
+  if (!ghlToken || !ghlLocation) {
+    console.error(
+      `${!ghlToken ? 'GHL_API_KEY' : 'GHL_LOCATION_ID'} is not set.\n\n` +
+        'In GoHighLevel: Settings -> Private Integrations -> create one with the\n' +
+        'contacts.write and contacts.readonly scopes. The token starts with "pit-".\n' +
+        'The Location ID is in Settings -> Business Profile (also in the browser URL).\n\n' +
+        '  node scripts/credentials.mjs set GHL_API_KEY\n' +
+        '  node scripts/credentials.mjs set GHL_LOCATION_ID\n',
+    );
+    process.exit(1);
+  }
+}
 
 const api = client();
 
@@ -144,9 +186,59 @@ const payloadFor = (c) => ({
   manatal_candidate_id: c.id,
 });
 
+/** A tag GoHighLevel can trigger a workflow on. Slugged because GHL tags are
+ *  lowercased and matched literally — "Work-From-Home Client Advisor" and
+ *  "work-from-home client advisor" are two different tags to a trigger. */
+const slug = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+
+/** The Contacts API body. `upsert` rather than `create` so re-running cannot
+ *  produce duplicates — GHL matches on email/phone within the location. */
+const contactFor = (c) => {
+  const job = jobTitleByCandidate.get(c.id) || '';
+  const [city, stateName] = (c.candidate_location || '').split(',').map((x) => x && x.trim());
+  return {
+    locationId: ghlLocation,
+    firstName: (c.full_name || '').split(' ')[0] || '',
+    lastName: (c.full_name || '').split(' ').slice(1).join(' '),
+    name: c.full_name || '',
+    ...(c.email ? { email: c.email } : {}),
+    ...(c.phone_number ? { phone: c.phone_number } : {}),
+    ...(city ? { city } : {}),
+    ...(stateName ? { state: stateName } : {}),
+    ...(c.zipcode ? { postalCode: c.zipcode } : {}),
+    source: job ? `Manatal — ${job}` : 'Manatal',
+    tags: [TAG, ...(job ? [`job-${slug(job)}`] : [])],
+  };
+};
+
+async function sendViaApi(c) {
+  const res = await fetch(`${GHL_API}/contacts/upsert`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${ghlToken}`,
+      Version: '2021-07-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(contactFor(c)),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+  return res.json();
+}
+
+async function sendViaWebhook(c) {
+  const res = await fetch(webhook, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payloadFor(c)),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return null;
+}
+
 if (!LIVE) {
+  console.log(`Mode: ${MODE}${MODE === 'api' ? '  (Contacts API — no per-contact charge)' : `  (Inbound Webhook — $0.01 x ${fresh.length} = $${(fresh.length * 0.01).toFixed(2)})`}\n`);
   for (const c of fresh.slice(0, 5)) {
-    console.log(JSON.stringify(payloadFor(c), null, 2));
+    console.log(JSON.stringify(MODE === 'api' ? contactFor(c) : payloadFor(c), null, 2));
     console.log('');
   }
   if (fresh.length > 5) console.log(`…and ${fresh.length - 5} more\n`);
@@ -155,16 +247,12 @@ if (!LIVE) {
 }
 
 // ── send ─────────────────────────────────────────────────────────────
+console.log(`Mode: ${MODE}\n`);
 let ok = 0;
 const failed = [];
 for (const c of fresh) {
   try {
-    const res = await fetch(webhook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payloadFor(c)),
-    });
-    if (!res.ok) { failed.push(`${c.full_name}: HTTP ${res.status}`); continue; }
+    await (MODE === 'api' ? sendViaApi(c) : sendViaWebhook(c));
     ok++;
     sent.add(c.id);
     console.log(`  sent  ${c.full_name}${jobTitleByCandidate.get(c.id) ? `  (${jobTitleByCandidate.get(c.id)})` : ''}`);
