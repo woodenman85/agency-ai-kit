@@ -24,16 +24,60 @@ carries the risk, not the tool that wrote it. When in doubt, leave it out.
 - **Protected-class filters.** No age, sex, religion, national origin, disability,
   marital, or family-status preferences — including soft versions like "young
   go-getters" or "recent grads".
+
+  **Work authorization is not one of these, and the distinction matters.** Every
+  posting carries, as the first bullet of its requirements list:
+
+  > Legally authorized to work in the United States
+
+  That is lawful and belongs there. It describes **eligibility to do the job** —
+  the role requires a state insurance producer licence, which requires US work
+  authorization — and it applies identically to every applicant. It says nothing
+  about where anyone is from.
+
+  What would cross the line is filtering on the things that merely *correlate*
+  with origin: a foreign phone number, a name, an accent, a degree from abroad,
+  a country on a résumé. Those are proxies for national origin, and using them is
+  the violation this rule exists to prevent, whatever the intent behind it.
+
+  So the test is the stated criterion, not the outcome. "Not authorized to work
+  in the US" is a reason. "Has a +254 number" is not — it is a guess about
+  someone's status, and the way to resolve it is to ask them.
+
+  The same holds when dispositioning applicants, not only when writing ads. A
+  candidate removed for this reason gets it recorded plainly as the licensing and
+  work-authorization requirement. Never "cultural fit" — on a candidate whose
+  only distinguishing feature in the file is being foreign, that label is the
+  accusation, written down in your own system.
 - **Carrier or product claims.** Do not name specific policy features, rates, or
   "tax-free" anything in a recruiting post. It is a job posting, not a sales piece.
 
 ## Always
 
-- State the 1099 independent-contractor, commission-only structure explicitly in the
-  body. The literal string `1099` and an explicit commission word must appear —
-  job-board validators match those tokens.
+- State the 1099 independent-contractor structure explicitly in the body. The
+  literal string `1099` must appear — job-board validators match that token.
+
+  **This rule used to require an explicit commission word, and no longer does.**
+  Manatal restricted this account twice (2026-09-01 and 2026-09-29) because
+  commission-only roles are non-compliant with their Job Posting Trust & Safety
+  Policy, and the first attempt to satisfy it — swapping "commission-only" for
+  "commission-based" — was flagged anyway. On 2026-09-29 the compensation line
+  across all 255 Manatal postings became:
+
+  > This is a 1099 independent contractor position. Earnings are based on
+  > individual production.
+
+  Both sentences are true. Note what it no longer does: state that the role pays
+  no salary. Someone who knows "1099 independent contractor" means no wage will
+  infer it; a career changer may not. That was the agency owner's call, made
+  explicitly. If a candidate is ever surprised to learn there is no base pay,
+  this line is why, and it should be revisited.
 - State that a state life insurance license is required before selling, and that
   licensing timelines vary by state.
+- Include the work-authorization requirement as the first bullet of the
+  requirements list: **"Legally authorized to work in the United States."** See
+  the protected-class note above for why this is an eligibility requirement and
+  not a national-origin filter.
 - State that the role is 100% remote if it is. Google for Jobs requires the
   disclosure to index it as remote.
 - Append the footer below to every description, including edits and refreshes.

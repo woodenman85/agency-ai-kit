@@ -49,7 +49,12 @@ and how to apply.</p>
   access, supplied or warm leads, no cold calling, carrier count — each may appear
   ONLY if it is in `config/agency.json`. An aspiration in a voice profile is not a fact.
 - **Never invent** citizenship, age, residency, degree, vehicle, background-check, or
-  experience requirements.
+  experience requirements. The one approved exception is the work-authorization
+  line — "Legally authorized to work in the United States" — which every posting
+  carries as the first bullet of its requirements list. It is an eligibility
+  requirement of a licensed role, not a residency or citizenship test, and
+  `compliance.md` explains the difference. Do not extend it into anything about
+  citizenship, visa status, or national origin.
 - **"The honest part" must be specific.** The person a final-expense role turns away
   is not the person a bilingual or veteran role turns away. A close that would read
   identically on a different posting is a failed close.
