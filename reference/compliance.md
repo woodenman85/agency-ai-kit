@@ -84,20 +84,33 @@ carries the risk, not the tool that wrote it. When in doubt, leave it out.
 
 ## Required footer
 
-Build it from `config/agency.json` and append it verbatim as the last thing in the
-description HTML:
+Two paragraphs, built from `config/agency.json`, as the last thing in the
+description HTML — the attribution, then equal opportunity:
 
 ```html
-<p>------------------------------------------------------------------</p>
-<p>{agency_name}. {owner_name}, NPN {npn}. Independent insurance agency. Agents are
-independent contractors compensated by commission; this position does not offer a
-salary, hourly wage, or guaranteed income. A state life insurance license is required
-before soliciting or selling business, and licensing timelines vary by state.
-Individual results depend on individual effort and are not guaranteed. Equal
-opportunity — we consider every applicant regardless of race, color, religion, sex,
-sexual orientation, gender identity, national origin, age, disability, or veteran
-status.</p>
+<p>{agency_name} is an independent insurance agency. {owner_name}, NPN {npn}.
+Questions: {candidate_phone}.</p>
+<p>{agency_name} provides equal opportunity to all applicants without regard to
+race, color, religion, sex, national origin, age, disability, veteran status, or
+any other status protected by law.</p>
 ```
+
+The attribution paragraph is producer identification on regulated advertising, so
+it matters more for the licence on the copy than for any job board. It is also the
+one most often missing: on 2026-09-29 only 30 of 255 live postings carried it,
+while all 255 had the equal-opportunity paragraph.
+
+**This footer used to carry a compensation sentence** — "Agents are independent
+contractors compensated by commission; this position does not offer a salary,
+hourly wage, or guaranteed income" — and it was removed on 2026-09-29. Appending
+it now would put back the exact wording scrubbed from all 255 postings to satisfy
+Manatal's Trust & Safety review, and would undo that work one description at a
+time. Compensation belongs in the Compensation section and nowhere else.
+
+`scripts/add-npn-footer.mjs` deliberately does not build the attribution from this
+template. It copies the paragraph already live in the account and refuses to run
+if postings disagree about what it says, because an NPN and an agency name are
+facts that a script must never compose.
 
 If the agency is captive or operates under an upline's name, the footer must reflect
 whatever the carrier or IMO requires. Ask before assuming the wording above is
