@@ -68,7 +68,15 @@ for (const j of jobs) {
 const issue = (name) => ({ name, jobs: [] });
 const checks = {
   no1099: issue('body never says 1099'),
-  noCommission: issue('no commission word — feed validators reject this'),
+  // Inverted on 2026-10-01. This used to flag postings for NOT saying
+  // "commission", on the belief that feed validators required the word. They do
+  // not — reference/job-board-eligibility.md has the detail. Manatal restricted
+  // free board posting twice over commission-only roles, so the word appearing
+  // at all is now the finding, and the old check would have reported all 255
+  // postings as defective on the day they were finally clean.
+  commissionWord: issue('still contains "commission" anywhere in the body'),
+  noSalaryPhrase: issue('says "no salary" / "not a salaried" outside Compensation — reads as commission-only to a board filter'),
+  noWorkAuth: issue('missing the US work-authorization line'),
   noFooter: issue('compliance footer missing (no NPN)'),
   noRemote: issue('never states the role is remote'),
   payFigure: issue('a pay figure in the body — income claim'),
@@ -85,7 +93,9 @@ for (const j of jobs) {
   const push = (c) => c.jobs.push(j);
 
   if (!/\b1099\b/.test(body)) push(checks.no1099);
-  if (!/commission/i.test(body)) push(checks.noCommission);
+  if (/commission/i.test(body)) push(checks.commissionWord);
+  if (/no salary|not a salaried/i.test(body)) push(checks.noSalaryPhrase);
+  if (!/authorized to work/i.test(body)) push(checks.noWorkAuth);
   if (!/NPN/i.test(body)) push(checks.noFooter);
   if (!/remote|work[- ]from[- ]home|telecommut/i.test(body)) push(checks.noRemote);
   if (/\$\s?\d|\b\d{2,3}\s?k\b/i.test(body)) push(checks.payFigure);
