@@ -22,6 +22,7 @@
   "licensing_note": "Coursework typically takes about two weeks; the agency walks candidates through it.",
 
   "apply_url": "https://example.com/apply",
+  "booking_url": "https://link.example.com/widget/bookings/your-calendar",
   "candidate_phone": "(555) 555-5555",
   "client_phone": "(555) 555-5556",
   "business_sms_number": "",

@@ -7,7 +7,19 @@
 //
 // Inserted as the first bullet of the requirements list:
 //
-//   <li>Legally authorized to work in the United States</li>
+//   <li>At least 18 years old and legally authorized to work in the United States</li>
+//
+// The age minimum was added 2026-10-01 at the agency owner's request. It is a
+// bona fide requirement, not a preference: no state issues a life insurance
+// producer licence to a minor, so an under-18 applicant cannot do this job at
+// all. A FLOOR of 18 is lawful for that reason; the ADEA protects applicants
+// aged 40 and over, and nothing here may express a preference for younger
+// candidates or cap an age. See reference/compliance.md.
+//
+// Postings that already carry the older authorization-only wording are UPGRADED
+// in place rather than skipped — all 255 live postings had it, so an insert-only
+// script would have reported "already has the line" for every one of them and
+// changed nothing.
 //
 // Why: on 2026-09-29 three applicants reached the pipeline with no US location
 // and had to be dispositioned by hand. Nothing in the postings stated the
@@ -36,11 +48,16 @@ const valueOf = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] 
 const LIVE = has('--live');
 const ONLY = valueOf('--only');
 
-export const LINE = '<li>Legally authorized to work in the United States</li>';
+export const LINE = '<li>At least 18 years old and legally authorized to work in the United States</li>';
 
 /** The same requirement as a sentence, for postings built on a different
  *  skeleton — see SENTENCE_TARGET below. */
-export const SENTENCE = ' Applicants must be legally authorized to work in the United States.';
+export const SENTENCE = ' Applicants must be at least 18 years old and legally authorized to work in the United States.';
+
+/** What the line and sentence said before the age minimum was added. Postings
+ *  carrying these are rewritten to the versions above. */
+export const OLD_LINE = '<li>Legally authorized to work in the United States</li>';
+export const OLD_SENTENCE = ' Applicants must be legally authorized to work in the United States.';
 
 /** Most postings put requirements in a list under one of two headings. */
 const LIST_HEADING = /(<h3>\s*(?:Qualifications|Who this is a fit for)\s*<\/h3>\s*<ul>)/i;
@@ -55,7 +72,28 @@ const SENTENCE_TARGET = /(<h3>\s*Licensing Requirement\s*<\/h3>\s*<p>[^<]*?)(<\/
 
 export function addLine(html) {
   if (!html) return { ok: false, reason: 'empty description' };
-  if (/authorized to work/i.test(html)) return { ok: false, reason: 'already has the line' };
+
+  // Already current — nothing to do.
+  if (html.includes(LINE) || html.includes(SENTENCE)) {
+    return { ok: false, reason: 'already has the current requirement' };
+  }
+
+  // Carries the older authorization-only wording: upgrade it in place. This has
+  // to come before the /authorized to work/ bail-out below, or every posting
+  // that already had the old line would be skipped.
+  if (html.includes(OLD_LINE)) {
+    return { ok: true, html: html.replace(OLD_LINE, LINE), added: LINE, upgraded: true };
+  }
+  if (html.includes(OLD_SENTENCE)) {
+    return { ok: true, html: html.replace(OLD_SENTENCE, SENTENCE), added: SENTENCE, upgraded: true };
+  }
+
+  // Some other phrasing mentions work authorization. Do not guess at rewriting
+  // it — report it so it can be looked at.
+  if (/authorized to work/i.test(html)) {
+    return { ok: false, reason: 'mentions work authorization in wording this script does not recognize' };
+  }
+
   if (LIST_HEADING.test(html)) {
     return { ok: true, html: html.replace(LIST_HEADING, `$1${LINE}`), added: LINE };
   }
@@ -67,13 +105,20 @@ export function addLine(html) {
 
 /** Refuse anything that changed more than it should have. Runs against live
  *  postings, so a silent regression is expensive. */
-export function verify(before, after, added = LINE) {
+export function verify(before, after, added = LINE, { upgraded = false } = {}) {
   const problems = [];
   if (!after.includes(added)) problems.push('the requirement is not present');
   if ((after.match(/authorized to work/gi) || []).length !== 1) problems.push('it appears more than once');
-  if (after.length !== before.length + added.length) problems.push('something other than the inserted text changed');
-  // The sentence variant inserts mid-document, so only the list variant leaves
-  // the tail byte-identical.
+  if (!/\bat least 18 years old\b/i.test(after)) problems.push('lost the age minimum');
+
+  // An upgrade REPLACES the old wording, so the length grows only by the
+  // difference between the two. An insert adds the whole thing.
+  const old = added === LINE ? OLD_LINE : OLD_SENTENCE;
+  const delta = upgraded ? added.length - old.length : added.length;
+  if (after.length !== before.length + delta) problems.push('something other than the requirement changed');
+
+  // The sentence variant sits mid-document, so only the list variant leaves the
+  // tail byte-identical.
   if (added === LINE && !after.endsWith(before.slice(-120))) problems.push('the tail of the description changed');
   return problems;
 }
@@ -91,12 +136,14 @@ if (RUN_DIRECTLY) {
   for (const j of jobs) {
     const r = addLine(j.description || '');
     if (!r.ok) { skipped.set(r.reason, (skipped.get(r.reason) ?? 0) + 1); continue; }
-    const problems = verify(j.description, r.html, r.added);
+    const problems = verify(j.description, r.html, r.added, { upgraded: r.upgraded });
     if (problems.length) { skipped.set(problems.join('; '), (skipped.get(problems.join('; ')) ?? 0) + 1); continue; }
-    planned.push({ job: j, html: r.html });
+    planned.push({ job: j, html: r.html, upgraded: !!r.upgraded });
   }
 
-  console.log(`${planned.length} to update, ${[...skipped.values()].reduce((a, b) => a + b, 0)} skipped`);
+  const upgrades = planned.filter((p) => p.upgraded).length;
+  console.log(`${planned.length} to update (${upgrades} upgrading the older wording, ${planned.length - upgrades} newly inserted), ` +
+    `${[...skipped.values()].reduce((a, b) => a + b, 0)} skipped`);
   for (const [reason, n] of skipped) console.log(`  ${String(n).padStart(4)}  ${reason}`);
   console.log('');
 

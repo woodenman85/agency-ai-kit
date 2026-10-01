@@ -21,19 +21,29 @@ carries the risk, not the tool that wrote it. When in doubt, leave it out.
 - **Free leads** unless the agency actually supplies leads at no cost. "Warm leads",
   "no cold calling", and "leads provided" are all factual claims about the business
   model and must be true.
-- **Protected-class filters.** No age, sex, religion, national origin, disability,
-  marital, or family-status preferences — including soft versions like "young
-  go-getters" or "recent grads".
+- **Protected-class filters.** No sex, religion, national origin, disability,
+  marital, or family-status preferences, and no age *preference* — including soft
+  versions like "young go-getters" or "recent grads". The ADEA protects
+  applicants aged 40 and over, so nothing may favour younger candidates, cap an
+  age, or hint at either.
 
-  **Work authorization is not one of these, and the distinction matters.** Every
-  posting carries, as the first bullet of its requirements list:
+  **Work authorization and a minimum age of 18 are not preferences, and the
+  distinction matters.** Every posting carries, as the first bullet of its
+  requirements list:
 
-  > Legally authorized to work in the United States
+  > At least 18 years old and legally authorized to work in the United States
 
-  That is lawful and belongs there. It describes **eligibility to do the job** —
-  the role requires a state insurance producer licence, which requires US work
-  authorization — and it applies identically to every applicant. It says nothing
-  about where anyone is from.
+  Both halves are bona fide requirements of *this* job, not statements about who
+  the agency would rather hire:
+
+  - **18 years old** — no state issues a life insurance producer licence to a
+    minor. An under-18 applicant cannot perform the role at all, which is what
+    makes a floor lawful. A floor is not an age preference; a ceiling or a
+    "young and hungry" would be, and neither is permitted.
+  - **Work authorization** — the licence itself requires it.
+
+  Both describe **eligibility to do the job**, and both apply identically to
+  every applicant. Neither says anything about where anyone is from.
 
   What would cross the line is filtering on the things that merely *correlate*
   with origin: a foreign phone number, a name, an accent, a degree from abroad,
@@ -74,10 +84,12 @@ carries the risk, not the tool that wrote it. When in doubt, leave it out.
   this line is why, and it should be revisited.
 - State that a state life insurance license is required before selling, and that
   licensing timelines vary by state.
-- Include the work-authorization requirement as the first bullet of the
-  requirements list: **"Legally authorized to work in the United States."** See
-  the protected-class note above for why this is an eligibility requirement and
-  not a national-origin filter.
+- Include the eligibility requirement as the first bullet of the requirements
+  list: **"At least 18 years old and legally authorized to work in the United
+  States."** See the protected-class note above for why each half is an
+  eligibility requirement rather than an age preference or a national-origin
+  filter. The age minimum was added 2026-10-01; `scripts/add-eligibility-line.mjs`
+  upgrades postings carrying the earlier authorization-only wording.
 - State that the role is 100% remote if it is. Google for Jobs requires the
   disclosure to index it as remote.
 - Append the footer below to every description, including edits and refreshes.
