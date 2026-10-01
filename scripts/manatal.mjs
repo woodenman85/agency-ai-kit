@@ -96,12 +96,50 @@ export function die(err) {
   throw err;
 }
 
-/** Every job in the account, following pagination. */
-export async function allJobs(api) {
-  const out = [];
-  for (let page = 1; ; page++) {
-    const j = await (await api(`jobs/?page=${page}&page_size=50`)).json();
-    out.push(...j.results);
-    if (!j.next) return out;
+/** Every job in the account.
+ *
+ *  Manatal's pagination is not stable. Verified 2026-10-01: three pages of 100
+ *  returned 255 rows for a reported count of 255, but only 254 DISTINCT ids —
+ *  one job appeared on two pages and one was never returned at all. The rows
+ *  are not ordered by updated_at, created_at or id, so a page boundary can
+ *  land anywhere between calls.
+ *
+ *  This was behind every "straggler" in the 2026-09-29 posting rewrites. Each
+ *  run reported more jobs changed than the account later showed as changed, and
+ *  it looked like writes silently failing. They were not. The jobs were never
+ *  fetched, so they were never sent. A script that trusts one pass through this
+ *  endpoint quietly edits a subset and reports success.
+ *
+ *  So: collect by id, and keep re-paging until the number of distinct jobs
+ *  matches the count the API itself reports. Repeated passes see different
+ *  arbitrary slices, so the gaps fill in quickly. Throwing when they do not is
+ *  deliberate — a caller that is about to rewrite every posting in the account
+ *  must not proceed on a set it knows is incomplete. */
+export async function allJobs(api, { maxPasses = 6, pageSize = 50 } = {}) {
+  const byId = new Map();
+  let reported = null;
+
+  for (let pass = 1; pass <= maxPasses; pass++) {
+    for (let page = 1; ; page++) {
+      const j = await (await api(`jobs/?page=${page}&page_size=${pageSize}`)).json();
+      if (typeof j.count === 'number') reported = j.count;
+      for (const job of j.results ?? []) byId.set(job.id, job);
+      if (!j.next) break;
+    }
+    if (reported == null || byId.size >= reported) break;
   }
+
+  if (reported != null && byId.size < reported) {
+    throw new ManatalError(
+      'incomplete_listing',
+      0,
+      `Could only retrieve ${byId.size} of ${reported} jobs after ${maxPasses} passes.\n\n` +
+        "Manatal's job pagination returns overlapping and missing rows, and this many\n" +
+        'passes should normally close the gap. Refusing to continue: a bulk edit run on\n' +
+        'an incomplete list silently skips postings and reports success.\n\n' +
+        'Re-run in a minute. If it keeps happening, something changed on their side.',
+    );
+  }
+
+  return [...byId.values()];
 }
