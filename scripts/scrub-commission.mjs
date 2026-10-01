@@ -34,17 +34,27 @@ const ONLY = valueOf('--only');
  *  phrase a specific rule should have handled. Every replacement keeps the
  *  sentence true — these roles are production-based, which is what the
  *  Compensation line already says. */
-/** The original Compensation paragraph, still present on the one posting that
- *  fix-compensation.mjs skipped. Normalizing it here legitimately removes a
- *  no-salary phrase — the same removal already applied to the other 254 — so
- *  verify() has to know to expect that one drop and not mistake it for an
- *  unwanted one. Without this the guard fires, the posting is skipped, and it
- *  keeps the word this whole pass exists to remove. */
-export const ORIGINAL_COMPENSATION =
-  'Compensation is commission-based. No salary or hourly pay is provided. Earnings depend on individual production. If that structure fits your situation, we welcome your application.';
+/** The original Compensation paragraph, matched by SHAPE rather than as an
+ *  exact string.
+ *
+ *  It was an exact string until 2026-10-01, when a complete fetch of the
+ *  account turned up a posting reading "...If that structure makes sense for
+ *  your situation, The Wood Agency welcomes your application." against the
+ *  "...fits your situation, we welcome your application." the rule expected.
+ *  The exact match missed it, so the generic commission-based -> production-based
+ *  rule fired instead and left "No salary or hourly pay is provided. Earnings
+ *  depend on individual production." sitting in a live posting — a worse state
+ *  than before, because it now read as deliberate.
+ *
+ *  Matching the three sentences that carry the meaning, and swallowing whatever
+ *  closing sentence follows, covers wording variants that have not been seen yet.
+ *  Both spellings of the compensation word are accepted so a half-converted
+ *  paragraph is repaired rather than skipped. */
+export const COMPENSATION_PARAGRAPH =
+  /Compensation is (?:commission|production)-based\.\s*No salary or hourly pay is provided\.\s*Earnings depend on individual production\.[^<]*/gi;
 
 export const RULES = [
-  [ORIGINAL_COMPENSATION, 'Earnings are based on individual production.'],
+  [COMPENSATION_PARAGRAPH, 'Earnings are based on individual production.'],
 
   ['commission or variable-pay environment', 'variable-pay environment'],
   ['working on commission', 'working in a performance-based role'],
@@ -81,9 +91,11 @@ export const NO_SALARY_RULES = [
 
 export function scrub(html, { dropNoSalary = false } = {}) {
   if (!html) return { ok: false, reason: 'empty description' };
+  const apply = (text, [from, to]) =>
+    from instanceof RegExp ? text.replace(from, to) : text.split(from).join(to);
   let out = html;
-  for (const [from, to] of RULES) out = out.split(from).join(to);
-  if (dropNoSalary) for (const [from, to] of NO_SALARY_RULES) out = out.split(from).join(to);
+  for (const rule of RULES) out = apply(out, rule);
+  if (dropNoSalary) for (const rule of NO_SALARY_RULES) out = apply(out, rule);
   if (out === html) return { ok: false, reason: 'nothing to change' };
   return { ok: true, html: out };
 }
@@ -107,7 +119,9 @@ export function verify(before, after, { dropNoSalary = false } = {}) {
   // paragraph and a separate no-salary bullet still has the bullet protected.
   if (!dropNoSalary) {
     const countNoSalary = (s) => (text(s).match(/no salary|not a salaried/gi) || []).length;
-    const expectedDrop = before.includes(ORIGINAL_COMPENSATION) ? 1 : 0;
+    COMPENSATION_PARAGRAPH.lastIndex = 0; // a /g regex carries state between tests
+    const expectedDrop = COMPENSATION_PARAGRAPH.test(before) ? 1 : 0;
+    COMPENSATION_PARAGRAPH.lastIndex = 0;
     if (countNoSalary(after) < countNoSalary(before) - expectedDrop) {
       problems.push('dropped a no-salary disclosure without --drop-no-salary');
     }

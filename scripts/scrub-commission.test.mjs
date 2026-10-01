@@ -1,6 +1,6 @@
 // Fixtures are real sentences taken from live Manatal postings on 2026-09-29.
 // Run: node scripts/scrub-commission.test.mjs
-import { scrub, verify, RULES, NO_SALARY_RULES, ORIGINAL_COMPENSATION } from './scrub-commission.mjs';
+import { scrub, verify, RULES, NO_SALARY_RULES, COMPENSATION_PARAGRAPH } from './scrub-commission.mjs';
 
 const wrap = (body) =>
   `<p>${body}</p><h3>Qualifications</h3><ul><li>Legally authorized to work in the United States</li></ul>` +
@@ -45,7 +45,7 @@ console.log('\nThe posting fix-compensation.mjs skipped');
 {
   const html = wrap('Intro.').replace(
     '<p>This is a 1099 independent contractor position. Earnings are based on individual production.</p>',
-    `<p>This is a 1099 independent contractor role. ${ORIGINAL_COMPENSATION}</p>`,
+    '<p>This is a 1099 independent contractor role. Compensation is commission-based. No salary or hourly pay is provided. Earnings depend on individual production. If that structure fits your situation, we welcome your application.</p>',
   );
   const r = scrub(html);
   check('is rewritten', r.ok);
@@ -75,7 +75,7 @@ console.log('\nNo-salary disclosures are protected unless the flag is passed');
   // un-rewritten posting reads, and dropping it makes verify() fail for an
   // unrelated reason.
   const both = html.replace('<h3>Compensation</h3><p>This is a 1099 independent contractor position. Earnings are based on individual production.</p>',
-    `<h3>Compensation</h3><p>This is a 1099 independent contractor role. ${ORIGINAL_COMPENSATION}</p>`);
+    '<h3>Compensation</h3><p>This is a 1099 independent contractor role. Compensation is commission-based. No salary or hourly pay is provided. Earnings depend on individual production. If that structure fits your situation, we welcome your application.</p>');
   const r = scrub(both);
   check('a bullet is still protected when the old paragraph is also present',
     r.ok && /no salary or guaranteed pay/i.test(r.html) && verify(both, r.html).length === 0);
@@ -94,6 +94,30 @@ check('verify() catches a lost work-authorization line',
   verify(wrap(REAL[0]), '<p>1099 production-based</p>').some((p) => /work-authorization/.test(p)));
 check('no rule maps onto a replacement that still contains the word',
   [...RULES, ...NO_SALARY_RULES].every(([, to]) => !/commission/i.test(to)));
+
+// The variant found live on 2026-10-01: a different closing sentence, and the
+// compensation word already half-converted by the generic rule.
+console.log('\nCompensation paragraph variants');
+{
+  const variants = [
+    'Compensation is commission-based. No salary or hourly pay is provided. Earnings depend on individual production. If that structure fits your situation, we welcome your application.',
+    'Compensation is production-based. No salary or hourly pay is provided. Earnings depend on individual production. If that structure makes sense for your situation, The Wood Agency welcomes your application.',
+    'Compensation is commission-based. No salary or hourly pay is provided. Earnings depend on individual production.',
+  ];
+  for (const v of variants) {
+    const html = '<p>x</p><h3>Compensation</h3><p>This is a 1099 independent contractor position. ' + v + '</p>' +
+      '<p>Ben Wood, NPN 20251128.</p><p>Equal opportunity to all applicants.</p>';
+    const r = scrub(html);
+    const label = v.slice(0, 52) + '…';
+    check(label, r.ok
+      && /Earnings are based on individual production\./.test(r.html)
+      && !/commission/i.test(r.html)
+      && !/No salary or hourly pay/i.test(r.html)
+      && verify(html, r.html).length === 0);
+  }
+  check('a /g rule does not skip every other call (lastIndex state)',
+    variants.every((v) => { COMPENSATION_PARAGRAPH.lastIndex = 0; return COMPENSATION_PARAGRAPH.test(v); }));
+}
 
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nall passed');
 process.exit(failures ? 1 : 0);
