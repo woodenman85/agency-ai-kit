@@ -60,7 +60,7 @@ posts.forEach((p, i) => {
   if (!p.description) return;
   const d = p.description;
   if (!d.includes('1099')) problems.push(`${where}: description never says 1099`);
-  if (!/commission/i.test(d)) problems.push(`${where}: no commission word — a board validator will reject it`);
+  if (!/production|earnings/i.test(d)) problems.push(`${where}: never says earnings are based on production — the compensation structure must be disclosed`);
   if (!/NPN/i.test(d)) problems.push(`${where}: compliance footer is missing`);
   if (!d.includes('<h3>')) problems.push(`${where}: no <h3> sections — see reference/writing-standard.md`);
   if (p.city && new RegExp(p.city, 'i').test(p.title)) problems.push(`${where}: city belongs in the city field, not the title`);
@@ -104,7 +104,7 @@ for (let i = 0; i < fresh.length; i += 5) {
         country: p.country || 'United States',
         is_remote: p.is_remote !== false,
         is_published: PUBLISH,
-        contract_details: p.contract_details || 'full_time',
+        contract_details: p.contract_details || 'contractor',
         currency: 'USD',
         headcount: p.headcount || 1,
       }),

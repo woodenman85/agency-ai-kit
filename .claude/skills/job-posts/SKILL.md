@@ -18,6 +18,10 @@ organization — and, if the agency uses Manatal, publish them through its API.
 3. If the user has Manatal, confirm the token works: `node scripts/check-manatal.mjs`.
    It prints the organization id and current job count. If it fails, fix setup before
    writing postings you cannot publish.
+4. Read "Free job-board restriction" in `reference/manatal-api.md`. This account's free
+   job-board access has been restricted over compensation wording, and the question of
+   whether a production-based 1099 role is eligible at all is still open. After any
+   batch, run `node scripts/audit-manatal.mjs`.
 
 ## The two rulebooks — read both before writing
 
@@ -83,8 +87,10 @@ when it's actually relevant — not as a pitch on every posting run.
   a real careers page that real candidates see and that Google indexes.
 - Every description ends with the compliance footer. No exceptions, including edits.
 - Every description states the role is 100% remote if it is (Google for Jobs requires
-  the disclosure), contains the literal string `1099`, and contains an explicit
-  commission word. Job-board validators match those tokens.
+  the disclosure), contains the literal string `1099`, and says earnings are based on
+  individual production. Never write "commission-only", "commission-based", or "no
+  salary or hourly pay" — Manatal's Trust & Safety team scans for that wording. The
+  structure is still disclosed; never obscure it.
 - Never put a city in the job title. City goes in the `city` / `state` fields.
 - Duplicate detection: `post-jobs.mjs` skips a posting whose title + city already
   exists in the account. Do not defeat that check by renaming.
@@ -95,3 +101,13 @@ when it's actually relevant — not as a pitch on every posting run.
 state, and career-page URL. To change one, PATCH it — see `reference/manatal-api.md`.
 Unpublishing is `{"is_published": false}`; it is reversible. Deleting is not — confirm
 with the user first, every time.
+
+`node scripts/prune-jobs.mjs` does this safely: dry run by default, selects by `--ids`
+or `--title`, and takes `--unpublish`, `--republish`, or `--delete`. Go in that order —
+unpublish, then republish to force a re-render, and delete only when the stale text
+survives both. `--delete` needs `--live --confirm-delete` and saves the full records to
+`deleted-jobs-*.json` first.
+
+`node scripts/audit-manatal.mjs` is the read-only check: it scans every job and the
+company profile for the flagged wording, and exits non-zero if anything is flagged or
+the scan was incomplete.

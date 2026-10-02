@@ -27,7 +27,7 @@ const STANDARD = read('reference/writing-standard.md');
 const COMPLIANCE = read('reference/compliance.md');
 const cities = JSON.parse(read('scripts/cities.json')).slice(0, Number(process.argv[3] || 50));
 
-const FOOTER = `<p>------------------------------------------------------------------</p>\n<p>${cfg.agency_name}. ${cfg.owner_name}, NPN ${cfg.npn}. Independent insurance agency. Agents are independent contractors compensated by commission; this position does not offer a salary, hourly wage, or guaranteed income. A state life insurance license is required before soliciting or selling business, and licensing timelines vary by state. Individual results depend on individual effort and are not guaranteed. Equal opportunity — we consider every applicant regardless of race, color, religion, sex, sexual orientation, gender identity, national origin, age, disability, or veteran status.</p>`;
+const FOOTER = `<p>------------------------------------------------------------------</p>\n<p>${cfg.agency_name}. ${cfg.owner_name}, NPN ${cfg.npn}. Independent insurance agency. Agents are independent contractors (1099) whose earnings are based on individual production and are not guaranteed. A state life insurance license is required before soliciting or selling business, and licensing timelines vary by state. Equal opportunity — we consider every applicant regardless of race, color, religion, sex, sexual orientation, gender identity, national origin, age, disability, or veteran status.</p>`;
 
 const FACTS = `VERIFIED AGENCY FACTS — do not contradict these and do not invent beyond them:\n${JSON.stringify(cfg, null, 2)}`;
 

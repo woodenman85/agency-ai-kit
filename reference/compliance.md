@@ -29,9 +29,15 @@ carries the risk, not the tool that wrote it. When in doubt, leave it out.
 
 ## Always
 
-- State the 1099 independent-contractor, commission-only structure explicitly in the
-  body. The literal string `1099` and an explicit commission word must appear —
-  job-board validators match those tokens.
+- State the 1099 independent-contractor structure explicitly in the body, and that
+  earnings are based on individual production and are not guaranteed. The literal
+  string `1099` must appear.
+- Do not write "commission-only", "commission-based", or "no salary or hourly pay" in
+  anything bound for Manatal. Manatal's Trust & Safety team scans for exactly that
+  wording and has restricted this agency's free job-board access over it. The
+  structure is still disclosed — as 1099 and production-based earnings — so a
+  candidate learns the same thing. Read "Free job-board restriction" in
+  `reference/manatal-api.md` before assuming wording is the whole story.
 - State that a state life insurance license is required before selling, and that
   licensing timelines vary by state.
 - State that the role is 100% remote if it is. Google for Jobs requires the
@@ -46,12 +52,11 @@ description HTML:
 ```html
 <p>------------------------------------------------------------------</p>
 <p>{agency_name}. {owner_name}, NPN {npn}. Independent insurance agency. Agents are
-independent contractors compensated by commission; this position does not offer a
-salary, hourly wage, or guaranteed income. A state life insurance license is required
-before soliciting or selling business, and licensing timelines vary by state.
-Individual results depend on individual effort and are not guaranteed. Equal
-opportunity — we consider every applicant regardless of race, color, religion, sex,
-sexual orientation, gender identity, national origin, age, disability, or veteran
+independent contractors (1099) whose earnings are based on individual production and
+are not guaranteed. A state life insurance license is required before soliciting or
+selling business, and licensing timelines vary by state. Equal opportunity — we
+consider every applicant regardless of race, color, religion, sex, sexual
+orientation, gender identity, national origin, age, disability, or veteran
 status.</p>
 ```
 
@@ -66,4 +71,5 @@ Run this check on every posting:
 1. Any number that could be read as pay? → remove it.
 2. Any promise about what the candidate will get? → make it conditional or remove it.
 3. Every provision in "What we provide" traceable to `config/agency.json`? → if not, cut it.
-4. `1099` present, commission word present, remote stated, footer attached? → if not, fix.
+4. `1099` present, production-based earnings stated, remote stated, footer attached,
+   and none of the Manatal-flagged phrasings above? → if not, fix.

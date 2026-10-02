@@ -8,6 +8,8 @@ posts.json
 roles.json
 postings.md
 last-run.json
+manatal-audit.json
+deleted-jobs-*.json
 
 node_modules/
 .DS_Store
