@@ -21,6 +21,18 @@ const AS_JSON = args.has('--json');
 const api = client();
 const jobs = await allJobs(api).catch(die);
 
+// The ORGANIZATION profile, not just the jobs.
+//
+// On 2026-10-02 this script reported "no issues found" across all 255 postings
+// while the organization profile — which renders on the career page beside every
+// listing — still said agents are "compensated by commission". Manatal's Trust &
+// Safety team was reading that and reporting commission-only language, and three
+// rounds of posting rewrites could not have touched it. An audit that only looks
+// at jobs will keep declaring a dirty account clean.
+const orgs = await (await api('organizations/?page_size=50')).json()
+  .then((j) => j.results ?? [])
+  .catch(() => { console.log('(could not read organizations — the profile was NOT checked)'); return []; });
+
 const text = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 /** Body with this job's own city/state/title removed, so two postings that are
@@ -166,8 +178,28 @@ if (dupTitles.length) {
   if (dupTitles.length > 12) console.log(`    …and ${dupTitles.length - 12} more`);
 }
 
+console.log('\nORGANIZATION PROFILE  — renders on the career page beside every job');
+if (!orgs.length) {
+  console.log('  not checked');
+} else {
+  for (const o of orgs) {
+    const d = o.description || '';
+    const bad = [];
+    if (/commission/i.test(d)) bad.push('says "commission"');
+    if (/no salary|not a salaried/i.test(d)) bad.push('says "no salary"');
+    if (/\$\s?\d|\b\d{2,3}\s?k\b/i.test(d)) bad.push('contains a pay figure');
+    if (!d) bad.push('empty');
+    console.log(`  ${o.id}  ${o.name}: ${bad.length ? bad.join('; ').toUpperCase() : 'clean'}`);
+    if (bad.length) {
+      const m = d.match(/[^.]*commission[^.]*\./i);
+      if (m) console.log(`        …${m[0].trim()}`);
+      console.log('        fix with: node scripts/fix-org-description.mjs --live');
+    }
+  }
+}
+
 const found = Object.values(checks).filter((c) => c.jobs.length);
-console.log('\nCONTENT & COMPLIANCE');
+console.log('\nCONTENT & COMPLIANCE  — job descriptions');
 if (!found.length) {
   console.log('  no issues found');
 } else {

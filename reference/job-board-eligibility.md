@@ -96,9 +96,37 @@ Manatal's email asks for four things. Do them in this order:
 4. **Wait** for their compliance review before republishing anything to the free
    board.
 
+## The career page is more than its job descriptions
+
+**2026-10-02.** Every script in this repo rewrote `jobs/{id}/description`. A
+complete pull of all 255 postings came back clean — no "commission", no
+"no salary", no pay figures, NPN on every one — and Manatal's Trust & Safety
+team still reported commission-only language on the career page.
+
+The **organization profile** was why. It renders beside every listing and read:
+
+> Our agents are 1099 independent contractors compensated by commission; no
+> insurance experience is required to start...
+
+Three rounds of posting rewrites could not have touched it, because nothing ever
+looked at it. `audit-jobs.mjs` reported "no issues found" the whole time.
+
+Anything public that a board or reviewer can read is in scope:
+
+| Surface | Endpoint | Checked by |
+|---|---|---|
+| Job descriptions | `jobs/{id}/` | `audit-jobs.mjs`, `scrub-commission.mjs` |
+| **Organization profile** | `organizations/{id}/` | `audit-jobs.mjs`, `fix-org-description.mjs` |
+| Career page cache | — | not reachable from the API; may lag a fix |
+
+Before telling a board the account is clean, check every row. "I checked the
+jobs" is not "I checked the account", and saying the second when you did the
+first is how an appeal gets rejected on evidence you handed over yourself.
+
 ## Rules
 
 - Never remove or weaken a compensation disclosure to pass a board filter.
+- Audit the organization profile, not only the job descriptions. See above.
 - Never populate Manatal `salary_min`/`salary_max` on a commission-only role.
 - Never put an earnings figure in description body copy.
 - A working API token is not evidence that publishing is allowed. Free job board
