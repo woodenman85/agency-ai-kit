@@ -11,13 +11,10 @@
 // Exit code: 0 clean, 1 something flagged, 2 the scan was incomplete (a "clean" can't be trusted).
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, requireKey } from './env.mjs';
+import { ROOT } from './env.mjs';
+import { fetchAll, pause } from './manatal.mjs';
 
-const key = requireKey('MANATAL_API_KEY', 'Get the key in Manatal: Settings -> Integrations -> Open API. It is account-wide, so treat it like a password.');
-const BASE = process.env.MANATAL_API_BASE || 'https://api.manatal.com/open/v3/';
 const args = new Set(process.argv.slice(2));
-
-const api = (p) => fetch(`${BASE}${p}`, { headers: { Authorization: `Token ${key}` } });
 
 // What Manatal's reviewers quoted back to us, plus the neighbouring phrasings of the same claim.
 const FLAGS = [
@@ -29,30 +26,15 @@ const FLAGS = [
 const text = (s) => String(s ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 const snippet = (s, m) => text(s).slice(Math.max(0, m.index - 50), m.index + m[0].length + 50).trim();
 
-/** Every page of a list endpoint. offset/limit are silently ignored by Manatal; page/page_size are not. */
-async function pageAll(p) {
-  const rows = [];
-  let count = null;
-  for (let page = 1; ; page++) {
-    const res = await api(`${p}?page=${page}&page_size=50`);
-    if (!res.ok) throw new Error(`GET ${p} page ${page}: HTTP ${res.status}`);
-    const j = await res.json();
-    count = j.count ?? count;
-    rows.push(...j.results);
-    if (!j.next) break;
-  }
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  return { rows: [...byId.values()], count };
-}
-
 const findings = []; // { where, id, title, kind, snippet }
 const warnings = []; // { id, title, note }
 const incomplete = [];
+const notes = [];
 
 // ── completeness first: a scan that skipped jobs proves nothing ──────────
-const jobs = await pageAll('jobs/');
-if (jobs.count != null && jobs.rows.length !== jobs.count) incomplete.push(`fetched ${jobs.rows.length} jobs but Manatal reports ${jobs.count}`);
-const orgs = await pageAll('organizations/');
+const jobs = await fetchAll('jobs/');
+if (!jobs.complete) incomplete.push(`found ${jobs.rows.length} jobs but Manatal reports ${jobs.count}, even after re-reading the list with several page sizes — ${jobs.count - jobs.rows.length} job(s) are not being returned by the list and were NOT scanned`);
+const orgs = await fetchAll('organizations/');
 if (!orgs.rows.length) incomplete.push('no organization returned, so the company profile was not scanned');
 
 // ── organization profile ─────────────────────────────────────────────────
@@ -79,26 +61,36 @@ for (const j of jobs.rows) {
 }
 
 // ── what the public page shows (optional) ────────────────────────────────
+// The careers page is rendered by JavaScript, so a plain fetch usually sees an empty shell. We
+// probe one batch first; if none of it is readable we stop rather than hit the site 250 more times.
 if (args.has('--public')) {
   const targets = jobs.rows.filter((j) => j.career_page_url);
+  let readable = 0;
   let unreadable = 0;
   for (let i = 0; i < targets.length; i += 5) {
-    await Promise.all(targets.slice(i, i + 5).map(async (j) => {
+    const results = await Promise.all(targets.slice(i, i + 5).map(async (j) => {
       const label = `${j.position_name} (${j.city || 'no city'}, ${j.state || '-'})`;
       try {
         const res = await fetch(j.career_page_url, { redirect: 'follow' });
         const html = await res.text();
         // A page that doesn't contain the posting at all (client-rendered, error, bot wall) proves nothing.
-        if (!res.ok || !html.includes('1099')) { unreadable++; return; }
+        if (!res.ok || !html.includes('1099')) return false;
         for (const [kind, re] of FLAGS) {
           const m = re.exec(text(html));
           if (m) findings.push({ where: 'public page', id: j.id, title: label, kind, snippet: snippet(html, m) });
         }
-      } catch { unreadable++; }
+        return true;
+      } catch { return false; }
     }));
-    await new Promise((r) => setTimeout(r, 400));
+    readable += results.filter(Boolean).length;
+    unreadable += results.filter((r) => !r).length;
+    if (i === 0 && !readable) {
+      notes.push('The public careers pages could not be read as text (they are rendered by JavaScript), so --public could not check what a reviewer sees. Open a listing in your browser to check it by eye.');
+      break;
+    }
+    await pause(400);
   }
-  if (unreadable) incomplete.push(`${unreadable} of ${targets.length} public pages could not be read as text (client-rendered or blocked), so the public scan is partial`);
+  if (readable && unreadable) incomplete.push(`${unreadable} of ${targets.length} public pages could not be read as text, so the public scan is partial`);
 }
 
 // ── report ───────────────────────────────────────────────────────────────
@@ -115,12 +107,13 @@ for (const [label, list] of byKind) {
   console.log();
 }
 if (warnings.length) {
-  const notes = new Map();
-  for (const w of warnings) notes.set(w.note, (notes.get(w.note) || 0) + 1);
+  const counts = new Map();
+  for (const w of warnings) counts.set(w.note, (counts.get(w.note) || 0) + 1);
   console.log('Worth a look (not Manatal\'s stated reason, but wrong for a 1099 posting):');
-  for (const [n, c] of notes) console.log(`    ${String(c).padStart(4)}  ${n}`);
+  for (const [n, c] of counts) console.log(`    ${String(c).padStart(4)}  ${n}`);
   console.log();
 }
+for (const n of notes) console.log(`NOTE  ${n}\n`);
 for (const i of incomplete) console.log(`INCOMPLETE  ${i}`);
 
 if (args.has('--json')) {
@@ -128,6 +121,8 @@ if (args.has('--json')) {
   console.log('Wrote manatal-audit.json');
 }
 
+const flaggedJobs = new Set(findings.filter((f) => !f.where.startsWith('organization')).map((f) => f.id)).size;
+console.log(`\nRESULT: ${findings.length} finding(s) across ${flaggedJobs} job(s)${findings.some((f) => f.where.startsWith('organization')) ? ' and the company profile' : ''}; ${incomplete.length ? 'scan INCOMPLETE' : 'scan complete'}.`);
 console.log('A clean result means the wording Manatal quoted is gone. It does not mean Manatal considers a');
 console.log('production-based 1099 role eligible for the free job boards — only Manatal can say that.');
 process.exit(incomplete.length ? 2 : findings.length ? 1 : 0);

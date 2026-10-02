@@ -108,6 +108,10 @@ unpublish, then republish to force a re-render, and delete only when the stale t
 survives both. `--delete` needs `--live --confirm-delete` and saves the full records to
 `deleted-jobs-*.json` first.
 
+`node scripts/edit-jobs.mjs` finds and replaces text in descriptions (dry run by default,
+`--live` to write) and reads every record back to confirm the edit landed. Prefer fixing
+text over deleting a posting.
+
 `node scripts/audit-manatal.mjs` is the read-only check: it scans every job and the
 company profile for the flagged wording, and exits non-zero if anything is flagged or
 the scan was incomplete.

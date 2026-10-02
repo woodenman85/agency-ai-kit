@@ -11,10 +11,8 @@
 // so a deleted posting can be recreated; Manatal itself offers no undo.
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, requireKey } from './env.mjs';
-
-const key = requireKey('MANATAL_API_KEY', 'Get the key in Manatal: Settings -> Integrations -> Open API. It is account-wide, so treat it like a password.');
-const BASE = process.env.MANATAL_API_BASE || 'https://api.manatal.com/open/v3/';
+import { ROOT } from './env.mjs';
+import { api, fetchAll, pause } from './manatal.mjs';
 
 const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(n);
@@ -32,23 +30,17 @@ if (title && title.length < 6) usage('--title is matched as a substring; use at 
 const action = actions[0];
 if (action === '--delete' && LIVE && !flag('--confirm-delete')) usage('Deleting is permanent. Add --confirm-delete to proceed.');
 
-const api = (p, init = {}) => fetch(`${BASE}${p}`, {
-  ...init,
-  headers: { Authorization: `Token ${key}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
-});
-
-const all = [];
-for (let page = 1; ; page++) {
-  const res = await api(`jobs/?page=${page}&page_size=50`);
-  if (!res.ok) { console.error(`list jobs failed: HTTP ${res.status}`); process.exit(1); }
-  const j = await res.json();
-  all.push(...j.results);
-  if (!j.next) break;
-}
+const { rows: all, count, complete } = await fetchAll('jobs/');
+if (!complete) console.error(`Warning: Manatal reports ${count} jobs but the list returned only ${all.length}. --ids still reaches a job the list misses; --title can only match the ${all.length} it returned.\n`);
 
 const wanted = new Set(ids);
 const selected = all.filter((j) => wanted.has(j.id) || (title && j.position_name.toLowerCase().includes(title.toLowerCase())));
-const missing = ids.filter((id) => !all.some((j) => j.id === id));
+// A job the list doesn't return can still be fetched directly by id.
+const missing = [];
+for (const id of ids.filter((id) => !all.some((j) => j.id === id))) {
+  const res = await api(`jobs/${id}/`);
+  if (res.ok) selected.push(await res.json()); else missing.push(id);
+}
 if (missing.length) console.error(`Not found in this account: ${missing.join(', ')}\n`);
 if (!selected.length) { console.error('Nothing selected.'); process.exit(1); }
 
@@ -69,7 +61,7 @@ const step = async (j) => {
   let res;
   if (action === '--delete') res = await api(`jobs/${j.id}/`, { method: 'DELETE' });
   else if (action === '--unpublish') res = await patch(false);
-  else { res = await patch(false); if (res.ok) { await new Promise((r) => setTimeout(r, 1500)); res = await patch(true); } }
+  else { res = await patch(false); if (res.ok) { await pause(1500); res = await patch(true); } }
   return res.ok ? { id: j.id } : { id: j.id, error: `HTTP ${res.status} ${await res.text()}` };
 };
 
@@ -80,7 +72,7 @@ for (let i = 0; i < selected.length; i += 5) {
     if (r.error) console.log(`  FAILED  ${r.id}: ${r.error}`);
     else { ok++; console.log(`  ok      ${r.id}`); }
   }
-  if (i + 5 < selected.length) await new Promise((r) => setTimeout(r, 1200));
+  if (i + 5 < selected.length) await pause(1200);
 }
 console.log(`\n${ok} of ${selected.length} done.`);
 process.exit(ok === selected.length ? 0 : 1);

@@ -88,6 +88,8 @@ What follows for this kit:
   **company profile** (shown beside every listing, and the field that was missed for
   three rounds), and refuses to call the scan clean if it fetched fewer jobs than
   Manatal reports.
+- Fix text with `node scripts/edit-jobs.mjs` (find and replace in descriptions; reads
+  each record back to confirm the edit landed).
 - Escalate gently: `node scripts/prune-jobs.mjs --unpublish`, then `--republish` (forces
   a re-render from the current record), and `--delete` only as a last resort. Delete
   backs up the full records first; Manatal has no undo.
@@ -97,11 +99,16 @@ What follows for this kit:
 - **The company profile is part of every listing.** `GET /organizations/` →
   `description` renders beside each job on the careers page. A compliance fix that only
   edits jobs leaves it untouched.
-- **Check you read all of it.** Compare the number of jobs you fetched to `count` in the
-  response. A skipped page looks exactly like a clean account.
+- **A list pass can silently skip jobs.** Manatal gives no stable order between pages: a
+  255-job account came back as 253 unique jobs, and the two skipped listings went
+  unedited through three rounds with support. Always compare what you fetched to `count`.
+  `scripts/manatal.mjs` `fetchAll()` re-reads with other page sizes until the numbers
+  match, and says so if it can't; every script here uses it. A job the list won't return
+  can still be read, edited or deleted directly by id (`GET/PATCH/DELETE /jobs/{id}/`).
 - **Rate**: batch writes in groups of ~5 with a short pause. Bursts get throttled.
 - **Pagination**: use `?page=N&page_size=50`. `offset`/`limit` are silently ignored and
-  return page 1 again — trusting them makes it look like you created duplicates.
+  return page 1 again — trusting them makes it look like you created duplicates. Even
+  with `page`, one pass is not guaranteed complete — see the first gotcha above.
 - **No outbound webhooks.** Every Manatal integration is pull/token based, so anything
   that syncs applicants to a CRM has to poll on a schedule.
 - **Job caps on paid plans.** Trial has no cap; paid tiers do, and the lower tiers cap
