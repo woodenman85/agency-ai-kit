@@ -19,8 +19,10 @@ that it is 100% remote. 45 words maximum.</p>
 <h3>What we provide</h3>
 <ul>… 2–5 bullets, ONLY provisions listed in config/agency.json …</ul>
 <h3>The honest part</h3>
-<p>1–3 sentences: 1099 work where earnings depend on individual production, who this
-specific role is NOT for, and how to apply.</p>
+<p>1–3 sentences: open with <strong>Compensation:</strong> — paid under an independent
+contractor (1099) contract based on the business the agent personally produces, so it
+varies and is never guaranteed — then who this specific role is NOT for, and how to
+apply.</p>
 ```
 
 - All four headings appear. Never merge, rename, drop, or reorder them.

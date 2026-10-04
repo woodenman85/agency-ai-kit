@@ -29,9 +29,11 @@ carries the risk, not the tool that wrote it. When in doubt, leave it out.
 
 ## Always
 
-- State the 1099 independent-contractor structure explicitly in the body, and that
-  earnings are based on individual production and are not guaranteed. The literal
-  string `1099` must appear.
+- State the 1099 independent-contractor structure explicitly in the body, framed as a
+  contract, and that pay is based on individual production and is not guaranteed. The
+  literal string `1099` must appear. In "The honest part", lead with a
+  `<strong>Compensation:</strong>` sentence saying the agent is paid under an
+  independent contractor (1099) contract based on the business they personally produce.
 - Do not write "commission-only", "commission-based", or "no salary or hourly pay" in
   anything bound for Manatal. Manatal's Trust & Safety team scans for exactly that
   wording and has restricted this agency's free job-board access over it. The
@@ -52,9 +54,9 @@ description HTML:
 ```html
 <p>------------------------------------------------------------------</p>
 <p>{agency_name}. {owner_name}, NPN {npn}. Independent insurance agency. Agents are
-independent contractors (1099) whose earnings are based on individual production and
-are not guaranteed. A state life insurance license is required before soliciting or
-selling business, and licensing timelines vary by state. Equal opportunity — we
+independent contractors (1099) paid under contract based on individual production;
+compensation is not guaranteed. A state life insurance license is required before
+soliciting or selling business, and licensing timelines vary by state. Equal opportunity — we
 consider every applicant regardless of race, color, religion, sex, sexual
 orientation, gender identity, national origin, age, disability, or veteran
 status.</p>
