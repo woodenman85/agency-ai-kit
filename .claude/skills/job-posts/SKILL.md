@@ -113,6 +113,9 @@ job's applications with it) unless you add `--include-applicants`.
 `--live` to write) and reads every record back to confirm the edit landed. Prefer fixing
 text over deleting a posting.
 
+`node scripts/edit-organization.mjs` does the same find-and-replace on the company profile
+(the "about us" text shown beside every listing), with a dry run first.
+
 `node scripts/audit-manatal.mjs` is the read-only check: it scans every job and the
 company profile for the flagged wording, and exits non-zero if anything is flagged or
 the scan was incomplete.

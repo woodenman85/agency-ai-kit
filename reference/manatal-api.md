@@ -89,7 +89,8 @@ What follows for this kit:
   three rounds), and refuses to call the scan clean if it fetched fewer jobs than
   Manatal reports.
 - Fix text with `node scripts/edit-jobs.mjs` (find and replace in descriptions; reads
-  each record back to confirm the edit landed).
+  each record back to confirm the edit landed). The company profile has its own tool,
+  `node scripts/edit-organization.mjs`, same dry-run-first behaviour.
 - Escalate gently: `node scripts/prune-jobs.mjs --unpublish`, then `--republish` (forces
   a re-render from the current record), and `--delete` only as a last resort. Delete
   backs up the full records first (Manatal has no undo) and refuses jobs that have
