@@ -92,7 +92,9 @@ What follows for this kit:
   each record back to confirm the edit landed).
 - Escalate gently: `node scripts/prune-jobs.mjs --unpublish`, then `--republish` (forces
   a re-render from the current record), and `--delete` only as a last resort. Delete
-  backs up the full records first; Manatal has no undo.
+  backs up the full records first (Manatal has no undo) and refuses jobs that have
+  applicants. As of 2026-10-04 there are 39 applicants (all via ZipRecruiter on the free
+  feed, all at "New Candidates") attached to 23 jobs.
 
 ## Gotchas
 

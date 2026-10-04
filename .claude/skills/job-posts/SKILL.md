@@ -105,8 +105,9 @@ with the user first, every time.
 `node scripts/prune-jobs.mjs` does this safely: dry run by default, selects by `--ids`
 or `--title`, and takes `--unpublish`, `--republish`, or `--delete`. Go in that order —
 unpublish, then republish to force a re-render, and delete only when the stale text
-survives both. `--delete` needs `--live --confirm-delete` and saves the full records to
-`deleted-jobs-*.json` first.
+survives both. `--delete` needs `--live --confirm-delete`, saves the full records to
+`deleted-jobs-*.json` first, and refuses any job that has applicants (Manatal may delete a
+job's applications with it) unless you add `--include-applicants`.
 
 `node scripts/edit-jobs.mjs` finds and replaces text in descriptions (dry run by default,
 `--live` to write) and reads every record back to confirm the edit landed. Prefer fixing

@@ -8,7 +8,9 @@
 //
 // Pick the gentlest action that works: unpublish, then republish, before you ever delete.
 // --delete saves a full copy of every job it removes to deleted-jobs-<timestamp>.json first,
-// so a deleted posting can be recreated; Manatal itself offers no undo.
+// so a deleted posting can be recreated; Manatal itself offers no undo. --delete also refuses any
+// job that has applicants (Manatal may delete a job's applications with it) unless you add
+// --include-applicants.
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './env.mjs';
@@ -22,7 +24,7 @@ const actions = ['--unpublish', '--republish', '--delete'].filter(flag);
 const ids = (value('--ids') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const title = value('--title');
 
-const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text") (--unpublish | --republish | --delete) [--live] [--confirm-delete]`); process.exit(1); };
+const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text") (--unpublish | --republish | --delete) [--live] [--confirm-delete] [--include-applicants]`); process.exit(1); };
 if (actions.length !== 1) usage('Choose exactly one of --unpublish, --republish, --delete.');
 if (!ids.length && !title) usage('Say which jobs: --ids or --title.');
 if (ids.some(Number.isNaN)) usage('--ids must be comma-separated job ids.');
@@ -47,6 +49,28 @@ if (!selected.length) { console.error('Nothing selected.'); process.exit(1); }
 const verb = { '--unpublish': 'unpublish', '--republish': 'republish', '--delete': 'PERMANENTLY DELETE' }[action];
 console.log(`${selected.length} job(s) selected — would ${verb}:\n`);
 for (const j of selected) console.log(`  ${String(j.id).padEnd(9)} ${j.is_published ? 'LIVE ' : 'draft'}  ${(j.city || '-') + ', ' + (j.state || '-')}`.padEnd(48) + j.position_name);
+
+// Applicants hang off jobs. Deleting a job may take its applications with it, so check first.
+if (action === '--delete') {
+  let withApplicants = [];
+  try {
+    const matches = await fetchAll('matches/');
+    if (!matches.complete) throw new Error(`only ${matches.rows.length} of ${matches.count} applications could be listed`);
+    const per = new Map();
+    for (const m of matches.rows) per.set(m.job_id, (per.get(m.job_id) || 0) + 1);
+    withApplicants = selected.filter((j) => per.has(j.id)).map((j) => ({ id: j.id, n: per.get(j.id) }));
+  } catch (e) {
+    console.error(`\nCould not check which jobs have applicants (${e.message}).`);
+    if (LIVE && !flag('--include-applicants')) { console.error('Refusing to delete without knowing. Nothing was changed.'); process.exit(1); }
+  }
+  if (withApplicants.length) {
+    console.log(`\n${withApplicants.length} of these job(s) have applicants (${withApplicants.reduce((a, b) => a + b.n, 0)} applications): ${withApplicants.map((w) => `${w.id} (${w.n})`).join(', ')}`);
+    if (LIVE && !flag('--include-applicants')) {
+      console.error('\nRefusing to delete jobs that have applicants — Manatal may delete their applications with them. Unpublish those jobs instead (--unpublish), or add --include-applicants if you have exported the applicants and are sure. Nothing was changed.');
+      process.exit(1);
+    }
+  }
+}
 
 if (!LIVE) { console.log('\nDry run — nothing was changed. Add --live to do it.'); process.exit(0); }
 
