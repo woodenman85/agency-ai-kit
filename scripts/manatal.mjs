@@ -26,12 +26,16 @@ export async function api(p, init = {}) {
 /**
  * Every row of a list endpoint, merged by id.
  *
- * Manatal does not promise a stable order between pages, so a single pass can skip rows and
- * repeat others — an account of 255 jobs came back as 253 unique ones, which is how listings
- * went unedited through three rounds with Manatal support. When a pass comes up short we go
- * again with a different page size and merge, until we hold as many rows as Manatal says exist.
+ * Manatal does not promise a stable order between pages, so a multi-page read can skip rows and
+ * repeat others — an account of 255 jobs came back as 253, then 254, unique ones, which is how
+ * listings went unedited through three rounds with Manatal support. So:
+ *   1. read the list at a few page sizes and merge;
+ *   2. if still short, read jobs in created_at windows, splitting each window until it fits on a
+ *      single page. A one-page response has no page boundary to skip across, so it is complete
+ *      whatever order Manatal returns it in.
  *
- * `complete` is false if we never got there. Do not treat an incomplete list as the whole account.
+ * `complete` is false if we still hold fewer rows than Manatal says exist. Do not treat an
+ * incomplete list as the whole account.
  */
 export async function fetchAll(endpoint) {
   const byId = new Map();
@@ -51,6 +55,43 @@ export async function fetchAll(endpoint) {
     }
     if (count == null || byId.size >= count) break;
   }
+  if (count != null && byId.size < count && endpoint === 'jobs/') await readByWindows(endpoint, 'created_at', byId);
   const rows = [...byId.values()];
   return { rows, count: count ?? rows.length, complete: count == null || rows.length >= count };
+}
+
+const PAGE = 50;
+
+/** Merge every row of `endpoint` into `byId` by bisecting `field` (a datetime filter) into single-page windows. */
+async function readByWindows(endpoint, field, byId) {
+  let budget = 150; // requests; stops a filter Manatal ignores from recursing forever
+  const iso = (ms) => new Date(ms).toISOString();
+  const query = (lo, hi, page) => `${endpoint}?${field}__gte=${encodeURIComponent(iso(lo))}&${field}__lte=${encodeURIComponent(iso(hi))}&page=${page}&page_size=${PAGE}`;
+
+  async function window(lo, hi) {
+    if (budget-- <= 0) return;
+    const res = await api(query(lo, hi, 1));
+    if (!res.ok) return;
+    const j = await res.json();
+    if (!j.count) return;
+    if (j.count <= j.results.length) { for (const r of j.results) byId.set(r.id, r); return; }
+    if (hi - lo < 2) { // can't split further: page through what is there
+      for (const r of j.results) byId.set(r.id, r);
+      for (let page = 2, more = j.next; more && budget-- > 0; page++) {
+        const next = await (await api(query(lo, hi, page))).json();
+        for (const r of next.results) byId.set(r.id, r);
+        more = next.next;
+      }
+      return;
+    }
+    // Split where the rows actually are: the median of this page's sample, else the midpoint.
+    const sample = j.results.map((r) => Date.parse(r[field])).filter(Number.isFinite).sort((a, b) => a - b);
+    let mid = sample.length ? sample[Math.floor(sample.length / 2)] : Math.floor((lo + hi) / 2);
+    if (mid <= lo || mid >= hi) mid = Math.floor((lo + hi) / 2);
+    await pause(100);
+    await window(lo, mid);
+    await window(mid, hi); // inclusive on both sides: a job exactly at mid is seen twice, never missed
+  }
+
+  await window(Date.UTC(2020, 0, 1), Date.now() + 86400000);
 }

@@ -102,8 +102,9 @@ What follows for this kit:
 - **A list pass can silently skip jobs.** Manatal gives no stable order between pages: a
   255-job account came back as 253 unique jobs, and the two skipped listings went
   unedited through three rounds with support. Always compare what you fetched to `count`.
-  `scripts/manatal.mjs` `fetchAll()` re-reads with other page sizes until the numbers
-  match, and says so if it can't; every script here uses it. A job the list won't return
+  `scripts/manatal.mjs` `fetchAll()` re-reads with other page sizes, then falls back to
+  reading jobs in `created_at` windows small enough to fit one page (which can't skip
+  rows), and says so if it still can't match the count; every script here uses it. A job the list won't return
   can still be read, edited or deleted directly by id (`GET/PATCH/DELETE /jobs/{id}/`).
 - **Rate**: batch writes in groups of ~5 with a short pause. Bursts get throttled.
 - **Pagination**: use `?page=N&page_size=50`. `offset`/`limit` are silently ignored and
