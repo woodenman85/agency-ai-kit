@@ -44,7 +44,7 @@ posts.forEach((p, i) => {
   if (!p.description) return;
   const d = p.description;
   if (!d.includes('1099')) problems.push(`${where}: description never says 1099`);
-  if (!/production|earnings/i.test(d)) problems.push(`${where}: never says earnings are based on production — the compensation structure must be disclosed`);
+  if (!/independent[- ]contractor/i.test(d) || !/\bcontract\b/i.test(d)) problems.push(`${where}: never says the role is paid under an independent contractor (1099) contract`);
   if (!/NPN/i.test(d)) problems.push(`${where}: compliance footer is missing`);
   if (!d.includes('<h3>')) problems.push(`${where}: no <h3> sections — see reference/writing-standard.md`);
   if (p.city && new RegExp(p.city, 'i').test(p.title)) problems.push(`${where}: city belongs in the city field, not the title`);
