@@ -52,8 +52,8 @@ for (const j of targets) console.log(`  ${String(j.id).padEnd(9)} ${(j.city || '
 if (!LIVE) { console.log('\nDry run — nothing was changed. Add --live to do it.'); process.exit(0); }
 
 let verified = 0;
-for (let i = 0; i < targets.length; i += 5) {
-  const results = await Promise.all(targets.slice(i, i + 5).map(async (j) => {
+for (let i = 0; i < targets.length; i += 3) {
+  const results = await Promise.all(targets.slice(i, i + 3).map(async (j) => {
     const expected = j.description.split(find).join(replace);
     const res = await api(`jobs/${j.id}/`, { method: 'PATCH', body: JSON.stringify({ description: expected }) });
     if (!res.ok) return { id: j.id, error: `PATCH HTTP ${res.status} ${await res.text()}` };
@@ -67,7 +67,7 @@ for (let i = 0; i < targets.length; i += 5) {
     if (r.error) console.log(`  FAILED    ${r.id}: ${r.error}`);
     else { verified++; console.log(`  verified  ${r.id}`); }
   }
-  if (i + 5 < targets.length) await pause(1200);
+  if (i + 3 < targets.length) await pause(1200);
 }
 console.log(`\n${verified} of ${targets.length} edited and confirmed by reading the record back.`);
 process.exit(verified === targets.length ? 0 : 1);

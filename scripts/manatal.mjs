@@ -4,12 +4,24 @@ import { requireKey } from './env.mjs';
 export const key = requireKey('MANATAL_API_KEY', 'Get the key in Manatal: Settings -> Integrations -> Open API. It is account-wide, so treat it like a password.');
 const BASE = process.env.MANATAL_API_BASE || 'https://api.manatal.com/open/v3/';
 
-export const api = (p, init = {}) => fetch(`${BASE}${p}`, {
-  ...init,
-  headers: { Authorization: `Token ${key}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
-});
-
 export const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * fetch against the Manatal API. Manatal throttles bursts with HTTP 429 ("Expected available in
+ * 1 second"); a 429 means the request was not processed, so it is always safe to wait and retry.
+ */
+export async function api(p, init = {}) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${BASE}${p}`, {
+      ...init,
+      headers: { Authorization: `Token ${key}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
+    });
+    if (res.status !== 429 || attempt >= 8) return res;
+    const body = await res.clone().text();
+    const secs = Number(res.headers.get('retry-after')) || Number((body.match(/available in (\d+)/i) || [])[1]) || 1;
+    await pause((secs + 0.5) * 1000);
+  }
+}
 
 /**
  * Every row of a list endpoint, merged by id.
@@ -35,6 +47,7 @@ export async function fetchAll(endpoint) {
       count = j.count ?? count;
       for (const r of j.results) byId.set(r.id, r);
       if (!j.next) break;
+      await pause(150);
     }
     if (count == null || byId.size >= count) break;
   }
