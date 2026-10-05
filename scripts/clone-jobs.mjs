@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './env.mjs';
 import { api, fetchAll, pause } from './manatal.mjs';
+import { parseStates } from './states.mjs';
 
 const argv = process.argv.slice(2);
 const has = (n) => argv.includes(n);
@@ -30,7 +31,6 @@ const PUBLISH = has('--publish');
 const COUNT = Number(value('--cities') || 50);
 const OFFSET = Number(value('--offset') || 0);
 const citiesFile = value('--cities-file') || path.join(ROOT, 'scripts/cities.json');
-const excludeRaw = (value('--exclude-states') || '').split(',').map((x) => x.trim()).filter(Boolean);
 const sourceIds = (value('--source-ids') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 
 const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/clone-jobs.mjs --cities N [--offset N] [--cities-file path] [--exclude-states "Hawaii,NY"] [--source-ids 1,2,3] [--live] [--publish]`); process.exit(1); };
@@ -38,9 +38,8 @@ if (!Number.isInteger(COUNT) || COUNT < 1) usage('--cities must be a whole numbe
 if (!Number.isInteger(OFFSET) || OFFSET < 0) usage('--offset must be 0 or more.');
 if (PUBLISH && !LIVE) usage('--publish only applies with --live.');
 
-const ABBR = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming' };
 const allCities = JSON.parse(fs.readFileSync(citiesFile, 'utf8'));
-const excluded = excludeRaw.map((x) => ABBR[x.toUpperCase()] || x);
+const excluded = parseStates(value('--exclude-states'));
 const excludedLower = new Set(excluded.map((x) => x.toLowerCase()));
 const unknown = excluded.filter((x) => !allCities.some((c) => c.state.toLowerCase() === x.toLowerCase()));
 if (unknown.length) usage(`No cities in the list for: ${unknown.join(', ')}. Use full state names or two-letter codes.`);

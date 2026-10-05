@@ -107,12 +107,18 @@ or `--title`, and takes `--unpublish`, `--republish`, or `--delete`. Go in that 
 unpublish, then republish to force a re-render, and delete only when the stale text
 survives both. `--delete` needs `--live --confirm-delete`, saves the full records to
 `deleted-jobs-*.json` first, and refuses any job that has applicants (Manatal may delete a
-job's applications with it) unless you add `--include-applicants`.
+job's applications with it) unless you add `--include-applicants`, or any LIVE job unless you add
+`--include-live`. Selectors besides `--ids` and `--title`: `--clone-drafts` (unpublished jobs with a
+city), `--duplicate-cities` (every posting in a city except the lowest id), and `--in-states
+"Hawaii,NY,AK"`. `--publish` is a fourth action, for drafts Manatal created unpublished.
 
 `node scripts/clone-jobs.mjs` copies the reviewed template postings (the jobs with no city) to
-more cities word for word, rotating through the templates; dry run by default, `--live` to
-create, `--publish` to make them public. It refuses to clone a template containing flagged
-wording and skips any title+city that already exists.
+more cities word for word; dry run by default, `--live` to create, `--publish` to make them
+public. One posting per city, ever: any city that already has a posting under any title is
+skipped, and a city's template is fixed by its place in the city list, so reruns and
+`--exclude-states "Hawaii,NY,AK"` (names or two-letter codes) never shuffle or double up. It
+refuses to clone a template containing flagged wording, and refuses to create anything if the
+job list is incomplete (the duplicate check can't be trusted).
 
 `node scripts/edit-jobs.mjs` finds and replaces text in descriptions (dry run by default,
 `--live` to write) and reads every record back to confirm the edit landed. Prefer fixing

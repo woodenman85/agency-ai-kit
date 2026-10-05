@@ -16,19 +16,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './env.mjs';
 import { api, fetchAll, pause } from './manatal.mjs';
+import { parseStates } from './states.mjs';
 
 const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(n);
 const value = (n) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const LIVE = flag('--live');
-const actions = ['--unpublish', '--republish', '--delete'].filter(flag);
+const actions = ['--unpublish', '--republish', '--publish', '--delete'].filter(flag);
 const ids = (value('--ids') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const title = value('--title');
+const duplicateCities = flag('--duplicate-cities'); // every posting in a city except the oldest one
+const inStates = parseStates(value('--in-states')).map((x) => x.toLowerCase());
 const cloneDrafts = flag('--clone-drafts'); // unpublished jobs that have a city set: what clone-jobs creates before publishing
 
-const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text" | --clone-drafts) (--unpublish | --republish | --delete) [--live] [--confirm-delete] [--include-applicants]`); process.exit(1); };
+const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text" | --clone-drafts | --duplicate-cities | --in-states "Hawaii,NY") (--unpublish | --republish | --publish | --delete) [--live] [--confirm-delete] [--include-applicants] [--include-live]`); process.exit(1); };
 if (actions.length !== 1) usage('Choose exactly one of --unpublish, --republish, --delete.');
-if (!ids.length && !title && !cloneDrafts) usage('Say which jobs: --ids, --title or --clone-drafts.');
+if (!ids.length && !title && !cloneDrafts && !duplicateCities && !inStates.length) usage('Say which jobs: --ids, --title, --clone-drafts, --duplicate-cities or --in-states.');
 if (ids.some(Number.isNaN)) usage('--ids must be comma-separated job ids.');
 if (title && title.length < 6) usage('--title is matched as a substring; use at least 6 characters so it cannot match half the account by accident.');
 const action = actions[0];
@@ -38,7 +41,14 @@ const { rows: all, count, complete } = await fetchAll('jobs/');
 if (!complete) console.error(`Warning: Manatal reports ${count} jobs but the list returned only ${all.length}. --ids still reaches a job the list misses; --title can only match the ${all.length} it returned.\n`);
 
 const wanted = new Set(ids);
-const selected = all.filter((j) => wanted.has(j.id) || (title && j.position_name.toLowerCase().includes(title.toLowerCase())) || (cloneDrafts && j.city && !j.is_published));
+// The oldest posting (lowest id) in each city is the one that stays when --duplicate-cities is used.
+const oldestInCity = new Map();
+for (const j of all) if (j.city) { const k = `${j.city}|${j.state}`.toLowerCase(); if (!oldestInCity.has(k) || j.id < oldestInCity.get(k)) oldestInCity.set(k, j.id); }
+const selected = all.filter((j) => wanted.has(j.id)
+  || (title && j.position_name.toLowerCase().includes(title.toLowerCase()))
+  || (cloneDrafts && j.city && !j.is_published)
+  || (duplicateCities && j.city && oldestInCity.get(`${j.city}|${j.state}`.toLowerCase()) !== j.id)
+  || (inStates.length && j.city && inStates.includes((j.state || '').toLowerCase())));
 // A job the list doesn't return can still be fetched directly by id.
 const missing = [];
 for (const id of ids.filter((id) => !all.some((j) => j.id === id))) {
@@ -48,7 +58,7 @@ for (const id of ids.filter((id) => !all.some((j) => j.id === id))) {
 if (missing.length) console.error(`Not found in this account: ${missing.join(', ')}\n`);
 if (!selected.length) { console.error('Nothing selected.'); process.exit(1); }
 
-const verb = { '--unpublish': 'unpublish', '--republish': 'republish', '--delete': 'PERMANENTLY DELETE' }[action];
+const verb = { '--unpublish': 'unpublish', '--republish': 'republish', '--publish': 'publish', '--delete': 'PERMANENTLY DELETE' }[action];
 console.log(`${selected.length} job(s) selected — would ${verb}:\n`);
 for (const j of selected) console.log(`  ${String(j.id).padEnd(9)} ${j.is_published ? 'LIVE ' : 'draft'}  ${(j.city || '-') + ', ' + (j.state || '-')}`.padEnd(48) + j.position_name);
 
@@ -74,6 +84,12 @@ if (action === '--delete') {
   }
 }
 
+const liveOnes = selected.filter((j) => j.is_published);
+if (action === '--delete' && liveOnes.length) {
+  console.log(`\n${liveOnes.length} of these are LIVE (published) right now.`);
+  if (LIVE && !flag('--include-live')) { console.error('Refusing to delete live postings. Unpublish them first, or add --include-live if you are sure. Nothing was changed.'); process.exit(1); }
+}
+
 if (!LIVE) { console.log('\nDry run — nothing was changed. Add --live to do it.'); process.exit(0); }
 
 if (action === '--delete') {
@@ -87,6 +103,7 @@ const step = async (j) => {
   let res;
   if (action === '--delete') res = await api(`jobs/${j.id}/`, { method: 'DELETE' });
   else if (action === '--unpublish') res = await patch(false);
+  else if (action === '--publish') res = await patch(true);
   else { res = await patch(false); if (res.ok) { await pause(1500); res = await patch(true); } }
   return res.ok ? { id: j.id } : { id: j.id, error: `HTTP ${res.status} ${await res.text()}` };
 };

@@ -90,6 +90,9 @@ What follows for this kit:
   Manatal reports.
 - Roll the reviewed templates out to more cities with `node scripts/clone-jobs.mjs` (word for
   word; only the city and state fields change, so nothing new needs review). Dry run first.
+  One posting per city; `--exclude-states` skips states. Manatal can create a job as a draft
+  even when `is_published: true` is sent, so clone-jobs publishes those in a second step.
+  Clean up with `prune-jobs --duplicate-cities`, `--in-states`, `--clone-drafts`, `--publish`.
 - Fix text with `node scripts/edit-jobs.mjs` (find and replace in descriptions; reads
   each record back to confirm the edit landed). The company profile has its own tool,
   `node scripts/edit-organization.mjs`, same dry-run-first behaviour.
