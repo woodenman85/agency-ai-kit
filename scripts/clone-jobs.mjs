@@ -14,7 +14,9 @@
 // The templates are the jobs in your Manatal account that have NO city set (the ones Manatal
 // reviewed). Each city gets one posting, rotating through the templates in id order. The
 // description and title are copied exactly; only the city and state fields change, so nothing
-// new has to be reviewed. Cities come from scripts/cities.json (or --cities-file).
+// new has to be reviewed. A city's template is fixed by that city's place in the ORIGINAL list,
+// so changing --exclude-states or --offset between waves never reassigns it, and a city that
+// already has any posting is skipped (one posting per city). Cities come from scripts/cities.json (or --cities-file).
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './env.mjs';
@@ -42,6 +44,7 @@ const excluded = excludeRaw.map((x) => ABBR[x.toUpperCase()] || x);
 const excludedLower = new Set(excluded.map((x) => x.toLowerCase()));
 const unknown = excluded.filter((x) => !allCities.some((c) => c.state.toLowerCase() === x.toLowerCase()));
 if (unknown.length) usage(`No cities in the list for: ${unknown.join(', ')}. Use full state names or two-letter codes.`);
+const originalIndex = new Map(allCities.map((c, i) => [`${c.city}|${c.state}`.toLowerCase(), i]));
 const cities = allCities.filter((c) => !excludedLower.has(c.state.toLowerCase()));
 const chosen = cities.slice(OFFSET, OFFSET + COUNT);
 if (!chosen.length) usage(`No cities at offset ${OFFSET}; after exclusions the list has ${cities.length}.`);
@@ -59,19 +62,18 @@ for (const t of templates) {
   for (const [kind, re] of FLAGS) if (re.test(text)) { console.error(`Template "${t.position_name}" (${t.id}) contains ${kind}. Fix it before cloning.`); process.exit(1); }
 }
 
-const key = (title, city, state) => `${title}|${city || ''}|${state || ''}`.toLowerCase();
-const seen = new Set(all.map((j) => key(j.position_name, j.city, j.state)));
+const placeKey = (city, state) => `${city || ''}|${state || ''}`.toLowerCase();
+const hasPosting = new Set(all.filter((j) => j.city).map((j) => placeKey(j.city, j.state)));
 const plan = [];
-chosen.forEach((c, i) => {
-  const t = templates[(OFFSET + i) % templates.length];
-  if (seen.has(key(t.position_name, c.city, c.state))) return;
-  plan.push({ t, c });
-});
+for (const c of chosen) {
+  if (hasPosting.has(placeKey(c.city, c.state))) continue; // one posting per city, whatever its title
+  plan.push({ t: templates[originalIndex.get(placeKey(c.city, c.state)) % templates.length], c });
+}
 
 console.log(`${templates.length} template(s):`);
 for (const t of templates) console.log(`  ${String(t.id).padEnd(9)} ${t.position_name}`);
 if (excluded.length) console.log(`\nExcluding ${excluded.join(', ')}: ${allCities.length - cities.length} cities removed from the list.`);
-console.log(`\n${chosen.length} cit${chosen.length === 1 ? 'y' : 'ies'} (list positions ${OFFSET + 1}-${OFFSET + chosen.length}); ${chosen.length - plan.length} already exist and will be skipped.`);
+console.log(`\n${chosen.length} cit${chosen.length === 1 ? 'y' : 'ies'} (list positions ${OFFSET + 1}-${OFFSET + chosen.length}); ${chosen.length - plan.length} already have a posting and will be skipped.`);
 console.log(`${plan.length} to create${LIVE ? (PUBLISH ? ', PUBLIC immediately' : ' as unpublished drafts') : ''}\n`);
 for (const { t, c } of plan.slice(0, 12)) console.log(`  ${(c.city + ', ' + c.state).padEnd(30)} ${t.position_name}`);
 if (plan.length > 12) console.log(`  …and ${plan.length - 12} more`);
@@ -105,7 +107,21 @@ for (let i = 0; i < plan.length; i += 5) {
   }
   if (i + 5 < plan.length) await pause(1200);
 }
-console.log(`\n${created.length} of ${plan.length} created${PUBLISH ? ' and live' : ' as drafts'}.`);
+if (PUBLISH) {
+  const stillDraft = created.filter((j) => !j.is_published);
+  if (stillDraft.length) {
+    console.log(`\nManatal created ${stillDraft.length} of them as drafts even though --publish was given; publishing those now…`);
+    for (let i = 0; i < stillDraft.length; i += 5) {
+      await Promise.all(stillDraft.slice(i, i + 5).map(async (j) => {
+        const res = await api(`jobs/${j.id}/`, { method: 'PATCH', body: JSON.stringify({ is_published: true }) });
+        if (res.ok) j.is_published = true; else console.log(`  FAILED to publish ${j.id}: HTTP ${res.status}`);
+      }));
+      if (i + 5 < stillDraft.length) await pause(1200);
+    }
+  }
+}
+const livecount = created.filter((j) => j.is_published).length;
+console.log(`\n${created.length} of ${plan.length} created; ${livecount} live${livecount < created.length ? `, ${created.length - livecount} still drafts` : ''}.`);
 if (created.length) fs.writeFileSync(path.join(ROOT, 'last-run.json'), JSON.stringify(created.map((j) => ({ id: j.id, title: j.position_name, city: j.city, state: j.state, url: j.career_page_url })), null, 2));
 console.log('Next: node scripts/audit-manatal.mjs');
 process.exit(created.length === plan.length ? 0 : 1);

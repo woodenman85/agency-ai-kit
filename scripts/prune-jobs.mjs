@@ -5,6 +5,7 @@
 //   node scripts/prune-jobs.mjs --title "First Responders" --unpublish --live # reversible
 //   node scripts/prune-jobs.mjs --title "First Responders" --republish --live # re-render from the current record
 //   node scripts/prune-jobs.mjs --ids 4410630 --delete --live --confirm-delete # permanent
+//   node scripts/prune-jobs.mjs --clone-drafts --delete                        # every UNPUBLISHED job with a city (clone-jobs leftovers); live ones are never selected
 //
 // Pick the gentlest action that works: unpublish, then republish, before you ever delete.
 // --delete saves a full copy of every job it removes to deleted-jobs-<timestamp>.json first,
@@ -23,10 +24,11 @@ const LIVE = flag('--live');
 const actions = ['--unpublish', '--republish', '--delete'].filter(flag);
 const ids = (value('--ids') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const title = value('--title');
+const cloneDrafts = flag('--clone-drafts'); // unpublished jobs that have a city set: what clone-jobs creates before publishing
 
-const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text") (--unpublish | --republish | --delete) [--live] [--confirm-delete] [--include-applicants]`); process.exit(1); };
+const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text" | --clone-drafts) (--unpublish | --republish | --delete) [--live] [--confirm-delete] [--include-applicants]`); process.exit(1); };
 if (actions.length !== 1) usage('Choose exactly one of --unpublish, --republish, --delete.');
-if (!ids.length && !title) usage('Say which jobs: --ids or --title.');
+if (!ids.length && !title && !cloneDrafts) usage('Say which jobs: --ids, --title or --clone-drafts.');
 if (ids.some(Number.isNaN)) usage('--ids must be comma-separated job ids.');
 if (title && title.length < 6) usage('--title is matched as a substring; use at least 6 characters so it cannot match half the account by accident.');
 const action = actions[0];
@@ -36,7 +38,7 @@ const { rows: all, count, complete } = await fetchAll('jobs/');
 if (!complete) console.error(`Warning: Manatal reports ${count} jobs but the list returned only ${all.length}. --ids still reaches a job the list misses; --title can only match the ${all.length} it returned.\n`);
 
 const wanted = new Set(ids);
-const selected = all.filter((j) => wanted.has(j.id) || (title && j.position_name.toLowerCase().includes(title.toLowerCase())));
+const selected = all.filter((j) => wanted.has(j.id) || (title && j.position_name.toLowerCase().includes(title.toLowerCase())) || (cloneDrafts && j.city && !j.is_published));
 // A job the list doesn't return can still be fetched directly by id.
 const missing = [];
 for (const id of ids.filter((id) => !all.some((j) => j.id === id))) {
