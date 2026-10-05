@@ -88,6 +88,8 @@ What follows for this kit:
   **company profile** (shown beside every listing, and the field that was missed for
   three rounds), and refuses to call the scan clean if it fetched fewer jobs than
   Manatal reports.
+- Roll the reviewed templates out to more cities with `node scripts/clone-jobs.mjs` (word for
+  word; only the city and state fields change, so nothing new needs review). Dry run first.
 - Fix text with `node scripts/edit-jobs.mjs` (find and replace in descriptions; reads
   each record back to confirm the edit landed). The company profile has its own tool,
   `node scripts/edit-organization.mjs`, same dry-run-first behaviour.

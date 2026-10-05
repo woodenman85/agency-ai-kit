@@ -109,6 +109,11 @@ survives both. `--delete` needs `--live --confirm-delete`, saves the full record
 `deleted-jobs-*.json` first, and refuses any job that has applicants (Manatal may delete a
 job's applications with it) unless you add `--include-applicants`.
 
+`node scripts/clone-jobs.mjs` copies the reviewed template postings (the jobs with no city) to
+more cities word for word, rotating through the templates; dry run by default, `--live` to
+create, `--publish` to make them public. It refuses to clone a template containing flagged
+wording and skips any title+city that already exists.
+
 `node scripts/edit-jobs.mjs` finds and replaces text in descriptions (dry run by default,
 `--live` to write) and reads every record back to confirm the edit landed. Prefer fixing
 text over deleting a posting.
