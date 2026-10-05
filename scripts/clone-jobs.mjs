@@ -5,7 +5,12 @@
 //   node scripts/clone-jobs.mjs --cities 50 --live             # create them as unpublished drafts
 //   node scripts/clone-jobs.mjs --cities 50 --live --publish   # create them and make them public
 //   node scripts/clone-jobs.mjs --cities 50 --offset 50 --live --publish   # the next 50 cities
+//   node scripts/clone-jobs.mjs --cities 50 --exclude-states "Hawaii,NY,AK"   # skip states you don't want
 //
+// --exclude-states takes full names or two-letter codes. States are removed from the list BEFORE
+// --cities and --offset are counted, so you still get the number of postings you asked for. Use the
+// same --exclude-states on every wave so --offset keeps lining up.
+
 // The templates are the jobs in your Manatal account that have NO city set (the ones Manatal
 // reviewed). Each city gets one posting, rotating through the templates in id order. The
 // description and title are copied exactly; only the city and state fields change, so nothing
@@ -23,16 +28,23 @@ const PUBLISH = has('--publish');
 const COUNT = Number(value('--cities') || 50);
 const OFFSET = Number(value('--offset') || 0);
 const citiesFile = value('--cities-file') || path.join(ROOT, 'scripts/cities.json');
+const excludeRaw = (value('--exclude-states') || '').split(',').map((x) => x.trim()).filter(Boolean);
 const sourceIds = (value('--source-ids') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 
-const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/clone-jobs.mjs --cities N [--offset N] [--cities-file path] [--source-ids 1,2,3] [--live] [--publish]`); process.exit(1); };
+const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/clone-jobs.mjs --cities N [--offset N] [--cities-file path] [--exclude-states "Hawaii,NY"] [--source-ids 1,2,3] [--live] [--publish]`); process.exit(1); };
 if (!Number.isInteger(COUNT) || COUNT < 1) usage('--cities must be a whole number of 1 or more.');
 if (!Number.isInteger(OFFSET) || OFFSET < 0) usage('--offset must be 0 or more.');
 if (PUBLISH && !LIVE) usage('--publish only applies with --live.');
 
-const cities = JSON.parse(fs.readFileSync(citiesFile, 'utf8'));
+const ABBR = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming' };
+const allCities = JSON.parse(fs.readFileSync(citiesFile, 'utf8'));
+const excluded = excludeRaw.map((x) => ABBR[x.toUpperCase()] || x);
+const excludedLower = new Set(excluded.map((x) => x.toLowerCase()));
+const unknown = excluded.filter((x) => !allCities.some((c) => c.state.toLowerCase() === x.toLowerCase()));
+if (unknown.length) usage(`No cities in the list for: ${unknown.join(', ')}. Use full state names or two-letter codes.`);
+const cities = allCities.filter((c) => !excludedLower.has(c.state.toLowerCase()));
 const chosen = cities.slice(OFFSET, OFFSET + COUNT);
-if (!chosen.length) usage(`No cities at offset ${OFFSET}; the list has ${cities.length}.`);
+if (!chosen.length) usage(`No cities at offset ${OFFSET}; after exclusions the list has ${cities.length}.`);
 
 // What Manatal's reviewers flagged. Never clone a template that contains it.
 const FLAGS = [['commission', /commission/i], ['salary / hourly / wage wording', /\b(salary|salaried|hourly|wages?)\b/i], ['pay figure', /\$\s?\d|\b\d{2,3}\s?k\b|\b(six|seven)[- ]figures?\b/i]];
@@ -58,6 +70,7 @@ chosen.forEach((c, i) => {
 
 console.log(`${templates.length} template(s):`);
 for (const t of templates) console.log(`  ${String(t.id).padEnd(9)} ${t.position_name}`);
+if (excluded.length) console.log(`\nExcluding ${excluded.join(', ')}: ${allCities.length - cities.length} cities removed from the list.`);
 console.log(`\n${chosen.length} cit${chosen.length === 1 ? 'y' : 'ies'} (list positions ${OFFSET + 1}-${OFFSET + chosen.length}); ${chosen.length - plan.length} already exist and will be skipped.`);
 console.log(`${plan.length} to create${LIVE ? (PUBLISH ? ', PUBLIC immediately' : ' as unpublished drafts') : ''}\n`);
 for (const { t, c } of plan.slice(0, 12)) console.log(`  ${(c.city + ', ' + c.state).padEnd(30)} ${t.position_name}`);
