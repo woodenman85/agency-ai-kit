@@ -84,9 +84,17 @@ What follows for this kit:
 - Access is back, but nothing says it is permanent, so it can be pulled again. Post only
   the reviewed templates' wording (bodies unchanged; titles may vary, see
   `scripts/titles-2.json`), never obscure the 1099 structure to get past review, and if
-  access is restricted again, stop posting new waves until Manatal says why. Publishing
-  (`is_published`) is what makes a job eligible for the free feed; no script here toggles
-  anything else, and whether a board actually shows a posting can't be checked from the API.
+  access is restricted again, stop posting new waves until Manatal says why.
+- `is_published` only puts a job on the Career Page. Per Manatal's help pages (read as search
+  excerpts on 2026-10-08, not the pages themselves), free boards are a separate switch: an Admin
+  enables each board under Administration → Job Boards → View Free Job Boards, then each job is
+  sent from its Sourcing → Job Boards tab (Indeed is the exception: all-in or all-out for every
+  career-page job). Listings can take up to 48 hours, and a board may decline a job that
+  qualifies. None of this is done by these scripts, and the API may not expose it.
+- UNVERIFIED, check before cloning more city postings: one search excerpt of Manatal's Trust &
+  Safety policy says a remote role cannot be listed under a city, and that "always hiring" and
+  multi-position posts are barred; a second search could not find that rule. Read the policy page
+  itself (support.manatal.com/docs/manatal-trust-safety-policy).
 - Run `node scripts/audit-manatal.mjs` after any batch. It scans every job and the
   **company profile** (shown beside every listing, and the field that was missed for
   three rounds), and refuses to call the scan clean if it fetched fewer jobs than
