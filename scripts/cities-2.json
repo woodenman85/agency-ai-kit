@@ -1,0 +1,402 @@
+[
+  {
+    "city": "Bismarck",
+    "state": "North Dakota"
+  },
+  {
+    "city": "Flint",
+    "state": "Michigan"
+  },
+  {
+    "city": "Glendale",
+    "state": "Arizona"
+  },
+  {
+    "city": "Chattanooga",
+    "state": "Tennessee"
+  },
+  {
+    "city": "Athens",
+    "state": "Georgia"
+  },
+  {
+    "city": "West Valley City",
+    "state": "Utah"
+  },
+  {
+    "city": "Carmel",
+    "state": "Indiana"
+  },
+  {
+    "city": "Mount Pleasant",
+    "state": "South Carolina"
+  },
+  {
+    "city": "Huntington",
+    "state": "West Virginia"
+  },
+  {
+    "city": "Jersey City",
+    "state": "New Jersey"
+  },
+  {
+    "city": "Montgomery",
+    "state": "Alabama"
+  },
+  {
+    "city": "Fayetteville",
+    "state": "Arkansas"
+  },
+  {
+    "city": "Santa Fe",
+    "state": "New Mexico"
+  },
+  {
+    "city": "Gulfport",
+    "state": "Mississippi"
+  },
+  {
+    "city": "Broken Arrow",
+    "state": "Oklahoma"
+  },
+  {
+    "city": "Bozeman",
+    "state": "Montana"
+  },
+  {
+    "city": "Boulder",
+    "state": "Colorado"
+  },
+  {
+    "city": "Gilbert",
+    "state": "Arizona"
+  },
+  {
+    "city": "Great Falls",
+    "state": "Montana"
+  },
+  {
+    "city": "Madison",
+    "state": "Wisconsin"
+  },
+  {
+    "city": "Trenton",
+    "state": "New Jersey"
+  },
+  {
+    "city": "Meridian",
+    "state": "Idaho"
+  },
+  {
+    "city": "Nashua",
+    "state": "New Hampshire"
+  },
+  {
+    "city": "Lansing",
+    "state": "Michigan"
+  },
+  {
+    "city": "Lowell",
+    "state": "Massachusetts"
+  },
+  {
+    "city": "Cape Coral",
+    "state": "Florida"
+  },
+  {
+    "city": "Alexandria",
+    "state": "Virginia"
+  },
+  {
+    "city": "Sparks",
+    "state": "Nevada"
+  },
+  {
+    "city": "Lincoln",
+    "state": "Nebraska"
+  },
+  {
+    "city": "Duluth",
+    "state": "Minnesota"
+  },
+  {
+    "city": "Asheville",
+    "state": "North Carolina"
+  },
+  {
+    "city": "Lewiston",
+    "state": "Maine"
+  },
+  {
+    "city": "Irvine",
+    "state": "California"
+  },
+  {
+    "city": "Columbia",
+    "state": "Missouri"
+  },
+  {
+    "city": "Concord",
+    "state": "New Hampshire"
+  },
+  {
+    "city": "Cary",
+    "state": "North Carolina"
+  },
+  {
+    "city": "Lubbock",
+    "state": "Texas"
+  },
+  {
+    "city": "Amarillo",
+    "state": "Texas"
+  },
+  {
+    "city": "Joliet",
+    "state": "Illinois"
+  },
+  {
+    "city": "Anaheim",
+    "state": "California"
+  },
+  {
+    "city": "Aurora",
+    "state": "Illinois"
+  },
+  {
+    "city": "Aberdeen",
+    "state": "South Dakota"
+  },
+  {
+    "city": "Irving",
+    "state": "Texas"
+  },
+  {
+    "city": "Lafayette",
+    "state": "Louisiana"
+  },
+  {
+    "city": "Kenosha",
+    "state": "Wisconsin"
+  },
+  {
+    "city": "Corpus Christi",
+    "state": "Texas"
+  },
+  {
+    "city": "Lake Charles",
+    "state": "Louisiana"
+  },
+  {
+    "city": "Clarksville",
+    "state": "Tennessee"
+  },
+  {
+    "city": "Green Bay",
+    "state": "Wisconsin"
+  },
+  {
+    "city": "North Las Vegas",
+    "state": "Nevada"
+  },
+  {
+    "city": "Dover",
+    "state": "Delaware"
+  },
+  {
+    "city": "Port St. Lucie",
+    "state": "Florida"
+  },
+  {
+    "city": "Springfield",
+    "state": "Illinois"
+  },
+  {
+    "city": "Roswell",
+    "state": "Georgia"
+  },
+  {
+    "city": "Laramie",
+    "state": "Wyoming"
+  },
+  {
+    "city": "Salem",
+    "state": "Oregon"
+  },
+  {
+    "city": "Springfield",
+    "state": "Massachusetts"
+  },
+  {
+    "city": "Gresham",
+    "state": "Oregon"
+  },
+  {
+    "city": "Lakeland",
+    "state": "Florida"
+  },
+  {
+    "city": "Frederick",
+    "state": "Maryland"
+  },
+  {
+    "city": "Casper",
+    "state": "Wyoming"
+  },
+  {
+    "city": "Tallahassee",
+    "state": "Florida"
+  },
+  {
+    "city": "Cedar Rapids",
+    "state": "Iowa"
+  },
+  {
+    "city": "Missoula",
+    "state": "Montana"
+  },
+  {
+    "city": "Murfreesboro",
+    "state": "Tennessee"
+  },
+  {
+    "city": "Oakland",
+    "state": "California"
+  },
+  {
+    "city": "Canton",
+    "state": "Ohio"
+  },
+  {
+    "city": "Fort Collins",
+    "state": "Colorado"
+  },
+  {
+    "city": "Bloomington",
+    "state": "Minnesota"
+  },
+  {
+    "city": "Evansville",
+    "state": "Indiana"
+  },
+  {
+    "city": "Wilmington",
+    "state": "North Carolina"
+  },
+  {
+    "city": "St. George",
+    "state": "Utah"
+  },
+  {
+    "city": "Stockton",
+    "state": "California"
+  },
+  {
+    "city": "Stamford",
+    "state": "Connecticut"
+  },
+  {
+    "city": "Reading",
+    "state": "Pennsylvania"
+  },
+  {
+    "city": "Spartanburg",
+    "state": "South Carolina"
+  },
+  {
+    "city": "Akron",
+    "state": "Ohio"
+  },
+  {
+    "city": "Morgantown",
+    "state": "West Virginia"
+  },
+  {
+    "city": "Tempe",
+    "state": "Arizona"
+  },
+  {
+    "city": "Rockville",
+    "state": "Maryland"
+  },
+  {
+    "city": "Las Cruces",
+    "state": "New Mexico"
+  },
+  {
+    "city": "Orem",
+    "state": "Utah"
+  },
+  {
+    "city": "Newport News",
+    "state": "Virginia"
+  },
+  {
+    "city": "Huntsville",
+    "state": "Alabama"
+  },
+  {
+    "city": "Savannah",
+    "state": "Georgia"
+  },
+  {
+    "city": "Macon",
+    "state": "Georgia"
+  },
+  {
+    "city": "Rochester",
+    "state": "Minnesota"
+  },
+  {
+    "city": "Shreveport",
+    "state": "Louisiana"
+  },
+  {
+    "city": "Lawton",
+    "state": "Oklahoma"
+  },
+  {
+    "city": "Kent",
+    "state": "Washington"
+  },
+  {
+    "city": "Everett",
+    "state": "Washington"
+  },
+  {
+    "city": "Erie",
+    "state": "Pennsylvania"
+  },
+  {
+    "city": "Davenport",
+    "state": "Iowa"
+  },
+  {
+    "city": "Bowling Green",
+    "state": "Kentucky"
+  },
+  {
+    "city": "Hartford",
+    "state": "Connecticut"
+  },
+  {
+    "city": "Jonesboro",
+    "state": "Arkansas"
+  },
+  {
+    "city": "Allentown",
+    "state": "Pennsylvania"
+  },
+  {
+    "city": "Henderson",
+    "state": "Nevada"
+  },
+  {
+    "city": "Fayetteville",
+    "state": "North Carolina"
+  },
+  {
+    "city": "Rapid City",
+    "state": "South Dakota"
+  }
+]

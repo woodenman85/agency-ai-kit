@@ -120,6 +120,13 @@ skipped, and a city's template is fixed by its place in the city list, so reruns
 refuses to clone a template containing flagged wording, and refuses to create anything if the
 job list is incomplete (the duplicate check can't be trusted).
 
+**Regular waves.** `--next N` takes the next N cities in the list that have no posting yet, so every
+wave is the same command; `--titles-file scripts/titles-2.json` gives the templates new titles
+while the approved bodies are copied untouched (every template must be mapped, or it refuses);
+`scripts/cities-2.json` is 100 more cities in random order. A wave is: dry run, show the user the
+plan, wait for a yes, then `--live --publish`, then `node scripts/audit-manatal.mjs`. When the
+list says every city has a posting, add more cities with `--cities-file`.
+
 `node scripts/edit-jobs.mjs` finds and replaces text in descriptions (dry run by default,
 `--live` to write) and reads every record back to confirm the edit landed. Prefer fixing
 text over deleting a posting.
