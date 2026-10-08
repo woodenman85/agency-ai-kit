@@ -134,6 +134,10 @@ text over deleting a posting.
 `node scripts/edit-organization.mjs` does the same find-and-replace on the company profile
 (the "about us" text shown beside every listing), with a dry run first.
 
+`node scripts/status-manatal.mjs` is the read-only snapshot to paste into a chat: templates, live
+and draft postings by title, repeated cities, postings in states the user excluded, cities left in
+each pool, the fields the API exposes on a job, and recent applicants by source (counts only).
+
 `node scripts/audit-manatal.mjs` is the read-only check: it scans every job and the
 company profile for the flagged wording, and exits non-zero if anything is flagged or
 the scan was incomplete.
