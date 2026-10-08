@@ -90,7 +90,12 @@ What follows for this kit:
   enables each board under Administration → Job Boards → View Free Job Boards, then each job is
   sent from its Sourcing → Job Boards tab (Indeed is the exception: all-in or all-out for every
   career-page job). Listings can take up to 48 hours, and a board may decline a job that
-  qualifies. None of this is done by these scripts, and the API may not expose it.
+  qualifies. None of this is done by these scripts. The API does not expose it: the job object
+  (checked with `status-manatal.mjs` on 2026-10-08) has no board or distribution field, and the
+  developer docs list no job-board endpoint, so free-board status is only visible in Manatal's
+  web app. Free boards rarely report back to the ATS, so applicants are the only signal. When a
+  board is enabled, Manatal offers to send all current career-page jobs to it; later jobs are
+  sent one at a time from Sourcing → Job Boards (no bulk option documented for an enabled board).
 - UNVERIFIED, check before cloning more city postings: one search excerpt of Manatal's Trust &
   Safety policy says a remote role cannot be listed under a city, and that "always hiring" and
   multi-position posts are barred; a second search could not find that rule. Read the policy page
