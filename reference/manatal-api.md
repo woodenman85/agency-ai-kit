@@ -93,7 +93,10 @@ What follows for this kit:
   qualifies. None of this is done by these scripts. The API does not expose it: the job object
   (checked with `status-manatal.mjs` on 2026-10-08) has no board or distribution field, and the
   developer docs list no job-board endpoint, so free-board status is only visible in Manatal's
-  web app. Free boards rarely report back to the ATS, so applicants are the only signal. When a
+  web app. Free boards rarely report back to the ATS, so applicants are the only signal. On
+  2026-10-13 the account had 1,226 applicants in 14 days, and all 300 in the sample were tagged
+  `source_details.channel = free_job_board`, so the city postings do reach free boards (`status-manatal.mjs`
+  now breaks applicants down by day and by board). When a
   board is enabled, Manatal offers to send all current career-page jobs to it; later jobs are
   sent one at a time from Sourcing → Job Boards (no bulk option documented for an enabled board).
 - UNVERIFIED, check before cloning more city postings: one search excerpt of Manatal's Trust &

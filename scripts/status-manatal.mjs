@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './env.mjs';
-import { api, fetchAll } from './manatal.mjs';
+import { api, fetchAll, pause } from './manatal.mjs';
 
 const EXCLUDED = ['hawaii', 'alaska', 'new york'];
 const FLAGS = /commission|\b(salary|salaried|hourly|wages?)\b|\$\s?\d|\b\d{2,3}\s?k\b|\b(six|seven)[- ]figures?\b/i;
@@ -45,12 +45,12 @@ console.log(`Postings with the city in the title: ${cityInTitle.length}`);
 console.log(`Jobs with flagged wording (commission / salary / hourly / pay figure): ${jobs.filter((j) => FLAGS.test(`${j.position_name} ${(j.description || '').replace(/<[^>]+>/g, ' ')}`)).length}`);
 
 console.log('\nCity pools (cities still without a posting, excluding Hawaii / Alaska / New York):');
-for (const f of ['cities.json', 'cities-2.json']) {
+const poolFiles = fs.readdirSync(path.join(ROOT, 'scripts')).filter((f) => /^cities(-\d+)?\.json$/.test(f)).sort((a, b) => parseInt(a.replace(/\D/g, '') || '1') - parseInt(b.replace(/\D/g, '') || '1'));
+for (const f of poolFiles) {
   const p = path.join(ROOT, 'scripts', f);
-  if (!fs.existsSync(p)) continue;
   const list = JSON.parse(fs.readFileSync(p, 'utf8')).filter((c) => !EXCLUDED.includes(c.state.toLowerCase()));
   const open = list.filter((c) => !perCity.has(key(c.city, c.state)));
-  console.log(`  ${f.padEnd(14)} ${list.length} usable, ${list.length - open.length} have a posting, ${open.length} left`);
+  console.log(`  ${f.padEnd(15)} ${list.length} usable, ${list.length - open.length} have a posting, ${open.length} left`);
 }
 
 const sample = jobs[0];
@@ -64,24 +64,39 @@ if (orgs[0]) {
   if (orgExtra.length) { console.log('\nOrganization fields that mention boards / feeds / sources:'); for (const k of orgExtra) console.log(`  ${k}: ${line(tally(orgs.map((o) => o[k])).slice(0, 6))}`); }
 }
 
-// Applicants in the last 14 days, counted by where they came from. Counts only.
+// Applicants in the last 14 days: how many per day and where they came from. Counts only, no names.
 try {
   const since = new Date(Date.now() - 14 * 86400000).toISOString();
-  const res = await api(`candidates/?created_at__gte=${encodeURIComponent(since)}&page=1&page_size=50`);
+  const url = (page) => `candidates/?created_at__gte=${encodeURIComponent(since)}&page=${page}&page_size=50`;
+  const res = await api(url(1));
   if (res.ok) {
     const first = await res.json();
     const rows = [...first.results];
-    for (let page = 2; first.next && page <= 6; page++) {
-      const r = await api(`candidates/?created_at__gte=${encodeURIComponent(since)}&page=${page}&page_size=50`);
+    let more = first.next;
+    for (let page = 2; more && page <= 40; page++) {
+      const r = await api(url(page));
       if (!r.ok) break;
-      const j = await r.json(); rows.push(...j.results); if (!j.next) break;
+      const j = await r.json(); rows.push(...j.results); more = j.next;
+      await pause(150);
     }
     const honored = rows.every((r) => !r.created_at || Date.parse(r.created_at) >= Date.parse(since) - 1000);
-    console.log(`\nApplicants in the last 14 days: ${honored ? first.count : 'unknown (Manatal ignored the date filter)'}`);
+    console.log(`\nApplicants in the last 14 days: ${honored ? first.count : 'unknown (Manatal ignored the date filter)'}${honored && first.count > rows.length ? ` (the breakdown below covers ${rows.length} of them)` : ''}`);
     if (honored && rows.length) {
-      const srcKeys = Object.keys(rows[0]).filter((k) => /source/i.test(k));
-      for (const k of srcKeys) console.log(`  ${k}: ${line(tally(rows.map((r) => r[k])).slice(0, 8))}`);
-      if (first.count > rows.length) console.log(`  (breakdown covers the first ${rows.length} of ${first.count})`);
+      const days = tally(rows.map((r) => (r.created_at || '').slice(0, 10))).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+      console.log(`  per day: ${days.map(([d, n]) => `${d.slice(5)} ${n}`).join('; ')}`);
+      // source fields, opened one or two levels down so a board's name is not cut off
+      const flat = new Map();
+      const add = (k, v) => { if (!flat.has(k)) flat.set(k, []); flat.get(k).push(v); };
+      const walk = (prefix, v, depth) => {
+        if (v && typeof v === 'object' && !Array.isArray(v) && depth < 3) for (const [k2, v2] of Object.entries(v)) walk(`${prefix}.${k2}`, v2, depth + 1);
+        else add(prefix, v);
+      };
+      for (const r of rows) for (const k of Object.keys(r).filter((k) => /source/i.test(k))) walk(k, r[k], 0);
+      for (const [k, vals] of flat) {
+        const t = tally(vals);
+        if (t.length === 1 && t[0][0] === '(empty)') continue;
+        console.log(`  ${k}: ${t.length > 8 ? `${t.length} different values; top ${line(t.slice(0, 4))}` : line(t)}`);
+      }
     }
   } else console.log(`\nApplicants: could not be read (HTTP ${res.status}).`);
 } catch (e) { console.log(`\nApplicants: could not be read (${e.message}).`); }
