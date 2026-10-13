@@ -94,9 +94,11 @@ What follows for this kit:
   (checked with `status-manatal.mjs` on 2026-10-08) has no board or distribution field, and the
   developer docs list no job-board endpoint, so free-board status is only visible in Manatal's
   web app. Free boards rarely report back to the ATS, so applicants are the only signal. On
-  2026-10-13 the account had 1,226 applicants in 14 days, and all 300 in the sample were tagged
-  `source_details.channel = free_job_board`, so the city postings do reach free boards (`status-manatal.mjs`
-  now breaks applicants down by day and by board). When a
+  2026-10-13 the account had 1,228 applicants since 10-09 (214, 190, 329, 290, 205 per day; 10-13 was
+  a partial day), every one tagged `source_details.channel = free_job_board`, so the city postings
+  do reach free boards. By board (`source_details.portal.display_name`): ZipRecruiter 747,
+  Talent.com 336, Adzuna 142, Monster 3. No Indeed or Jooble applicants appeared. The 100 postings
+  published that day had not had time to show up yet (`status-manatal.mjs` prints this breakdown). When a
   board is enabled, Manatal offers to send all current career-page jobs to it; later jobs are
   sent one at a time from Sourcing → Job Boards (no bulk option documented for an enabled board).
 - UNVERIFIED, check before cloning more city postings: one search excerpt of Manatal's Trust &
