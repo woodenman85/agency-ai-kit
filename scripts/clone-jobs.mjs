@@ -106,6 +106,7 @@ for (const c of chosen) {
 console.log(`${templates.length} template(s):`);
 for (const t of templates) console.log(`  ${String(t.id).padEnd(9)} ${t.position_name}${newTitle(t) !== t.position_name ? `  ->  ${newTitle(t)}` : ''}`);
 if (excluded.length) console.log(`\nExcluding ${excluded.join(', ')}: ${allCities.length - cities.length} cities removed from the list.`);
+if (NEXT !== null) { const open = cities.filter((c) => !hasPosting.has(placeKey(c.city, c.state))).length; console.log(`\n${cities.length - open} of the ${cities.length} cities in ${path.basename(citiesFile)} already have a posting; ${open} are still open.`); }
 console.log(`\n${chosen.length} cit${chosen.length === 1 ? 'y' : 'ies'} (${NEXT !== null ? `the next ${NEXT} without a posting` : `list positions ${OFFSET + 1}-${OFFSET + chosen.length}`}); ${chosen.length - plan.length} already have a posting and will be skipped.`);
 console.log(`${plan.length} to create${LIVE ? (PUBLISH ? ', PUBLIC immediately' : ' as unpublished drafts') : ''}\n`);
 for (const { t, c } of plan.slice(0, 12)) console.log(`  ${(c.city + ', ' + c.state).padEnd(30)} ${newTitle(t)}`);
