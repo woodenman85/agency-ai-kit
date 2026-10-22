@@ -56,8 +56,13 @@ const excluded = parseStates(value('--exclude-states'));
 const excludedLower = new Set(excluded.map((x) => x.toLowerCase()));
 const unknown = excluded.filter((x) => !allCities.some((c) => c.state.toLowerCase() === x.toLowerCase()));
 if (unknown.length) usage(`No cities in the list for: ${unknown.join(', ')}. Use full state names or two-letter codes.`);
-const originalIndex = new Map(allCities.map((c, i) => [`${c.city}|${c.state}`.toLowerCase(), i]));
-const cities = allCities.filter((c) => !excludedLower.has(c.state.toLowerCase()));
+// A city listed twice in the file is used once (its first place), so one run can never post it twice.
+const placeId = (c) => `${c.city}|${c.state}`.toLowerCase();
+const originalIndex = new Map();
+allCities.forEach((c, i) => { if (!originalIndex.has(placeId(c))) originalIndex.set(placeId(c), i); });
+const listedTwice = allCities.length - originalIndex.size;
+const removedByState = allCities.filter((c) => excludedLower.has(c.state.toLowerCase())).length;
+const cities = allCities.filter((c, i) => !excludedLower.has(c.state.toLowerCase()) && originalIndex.get(placeId(c)) === i);
 if (NEXT === null && !cities.slice(OFFSET, OFFSET + COUNT).length) usage(`No cities at offset ${OFFSET}; after exclusions the list has ${cities.length}.`);
 
 // What Manatal's reviewers flagged. Never clone a template that contains it.
@@ -105,7 +110,8 @@ for (const c of chosen) {
 
 console.log(`${templates.length} template(s):`);
 for (const t of templates) console.log(`  ${String(t.id).padEnd(9)} ${t.position_name}${newTitle(t) !== t.position_name ? `  ->  ${newTitle(t)}` : ''}`);
-if (excluded.length) console.log(`\nExcluding ${excluded.join(', ')}: ${allCities.length - cities.length} cities removed from the list.`);
+if (excluded.length) console.log(`\nExcluding ${excluded.join(', ')}: ${removedByState} cities removed from the list.`);
+if (listedTwice) console.log(`\nNote: ${path.basename(citiesFile)} lists ${listedTwice} city entr${listedTwice === 1 ? 'y' : 'ies'} more than once; each city is used once.`);
 if (NEXT !== null) { const open = cities.filter((c) => !hasPosting.has(placeKey(c.city, c.state))).length; console.log(`\n${cities.length - open} of the ${cities.length} cities in ${path.basename(citiesFile)} already have a posting; ${open} are still open.`); }
 console.log(`\n${chosen.length} cit${chosen.length === 1 ? 'y' : 'ies'} (${NEXT !== null ? `the next ${NEXT} without a posting` : `list positions ${OFFSET + 1}-${OFFSET + chosen.length}`}); ${chosen.length - plan.length} already have a posting and will be skipped.`);
 console.log(`${plan.length} to create${LIVE ? (PUBLISH ? ', PUBLIC immediately' : ' as unpublished drafts') : ''}\n`);

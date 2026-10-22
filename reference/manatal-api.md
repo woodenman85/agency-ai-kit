@@ -113,7 +113,7 @@ What follows for this kit:
   word; only the city and state fields change, so nothing new needs review). Dry run first.
   One posting per city; `--exclude-states` skips states. For a regular wave, use `--next N`
   (the next N cities in the list that have no posting yet), `--cities-file scripts/cities-2.json`
-  (100 more cities, in random order, none in HI/AK/NY; `cities-3.json` and `cities-4.json` are the next 100 each, with no overlap) and `--titles-file scripts/titles-2.json`
+  (100 more cities, in random order, none in HI/AK/NY; `cities-3.json` and `cities-4.json` are the next 100 each, with no overlap; `cities-5.json` is a 630-city master list for all later waves) and `--titles-file scripts/titles-2.json`
   (new titles on the same approved bodies). Manatal can create a job as a draft
   even when `is_published: true` is sent, so clone-jobs publishes those in a second step.
   Clean up with `prune-jobs --duplicate-cities`, `--in-states`, `--clone-drafts`, `--publish`.

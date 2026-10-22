@@ -36,10 +36,12 @@ for (const [title, n] of tally(cityJobs.map((j) => j.position_name))) console.lo
 
 const perCity = new Map();
 for (const j of cityJobs) perCity.set(key(j.city, j.state), [...(perCity.get(key(j.city, j.state)) || []), j]);
-const repeated = [...perCity.values()].filter((v) => v.length > 1);
+const liveByCity = new Map();
+for (const j of cityJobs.filter((x) => x.is_published)) liveByCity.set(key(j.city, j.state), [...(liveByCity.get(key(j.city, j.state)) || []), j]);
+const repeated = [...liveByCity.values()].filter((v) => v.length > 1);
 const banned = cityJobs.filter((j) => EXCLUDED.includes((j.state || '').toLowerCase()));
 const cityInTitle = cityJobs.filter((j) => j.city && new RegExp(`\\b${j.city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(j.position_name));
-console.log(`\nCities with more than one posting: ${repeated.length}${repeated.length ? ' — ' + repeated.slice(0, 8).map((v) => `${v[0].city}, ${v[0].state} (${v.length})`).join('; ') + (repeated.length > 8 ? '; …' : '') : ''}`);
+console.log(`\nCities with more than one LIVE posting: ${repeated.length}${repeated.length ? ' — ' + repeated.slice(0, 8).map((v) => `${v[0].city}, ${v[0].state} (${v.length})`).join('; ') + (repeated.length > 8 ? '; …' : '') : ''}`);
 console.log(`Postings in Hawaii / Alaska / New York: ${banned.length}${banned.length ? ' — ' + banned.slice(0, 8).map((j) => `${j.city}, ${j.state} [${j.id}]`).join('; ') : ''}`);
 console.log(`Postings with the city in the title: ${cityInTitle.length}`);
 console.log(`Jobs with flagged wording (commission / salary / hourly / pay figure): ${jobs.filter((j) => FLAGS.test(`${j.position_name} ${(j.description || '').replace(/<[^>]+>/g, ' ')}`)).length}`);
@@ -80,10 +82,19 @@ try {
       await pause(150);
     }
     const honored = rows.every((r) => !r.created_at || Date.parse(r.created_at) >= Date.parse(since) - 1000);
-    console.log(`\nApplicants in the last 14 days: ${honored ? first.count : 'unknown (Manatal ignored the date filter)'}${honored && first.count > rows.length ? ` (the breakdown below covers ${rows.length} of them)` : ''}`);
+    console.log(`\nApplicants in the last 14 days: ${honored ? first.count : 'unknown (Manatal ignored the date filter)'}${honored && first.count > rows.length ? `` : ''}`);
     if (honored && rows.length) {
-      const days = tally(rows.map((r) => (r.created_at || '').slice(0, 10))).sort((a, b) => (a[0] < b[0] ? -1 : 1));
-      console.log(`  per day: ${days.map(([d, n]) => `${d.slice(5)} ${n}`).join('; ')}`);
+      // exact per-day counts (UTC days): one count request per day, so the sample cap below cannot skew them
+      const perDay = [];
+      for (let back = 13; back >= 0; back--) {
+        const day = new Date(Date.now() - back * 86400000).toISOString().slice(0, 10);
+        const r = await api(`candidates/?created_at__gte=${day}T00:00:00Z&created_at__lte=${day}T23:59:59Z&page=1&page_size=1`);
+        if (!r.ok) { perDay.length = 0; break; }
+        perDay.push([day, (await r.json()).count]);
+        await pause(100);
+      }
+      if (perDay.length) console.log(`  per day (UTC, exact): ${perDay.filter(([, n]) => n).map(([d, n]) => `${d.slice(5)} ${n}`).join('; ')}`);
+      if (first.count > rows.length) console.log(`  the board breakdown below is the ${rows.length} applicants Manatal returned, not all ${first.count}`);
       // source fields, opened one or two levels down so a board's name is not cut off
       const flat = new Map();
       const add = (k, v) => { if (!flat.has(k)) flat.set(k, []); flat.get(k).push(v); };

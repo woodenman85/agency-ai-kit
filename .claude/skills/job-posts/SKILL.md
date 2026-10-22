@@ -123,7 +123,7 @@ job list is incomplete (the duplicate check can't be trusted).
 **Regular waves.** `--next N` takes the next N cities in the list that have no posting yet, so every
 wave is the same command; `--titles-file scripts/titles-2.json` gives the templates new titles
 while the approved bodies are copied untouched (every template must be mapped, or it refuses);
-`scripts/cities-2.json`, `cities-3.json` and `cities-4.json` are 100 more cities each, in random order, with no overlap between any of the pools. A wave is: dry run, show the user the
+`scripts/cities-2.json`, `cities-3.json` and `cities-4.json` are 100 more cities each, in random order, with no overlap between any of the pools. `scripts/cities-5.json` is a 630-city master list, balanced across states, for every wave from here on: `--next 100 --cities-file scripts/cities-5.json` takes the next 100 cities with no posting in the live account, so it is the same command every time. A city listed twice in a file is used once. Do not create other files named `cities-N.json` by hand, because they collide with the ones in the repo. A wave is: dry run, show the user the
 plan, wait for a yes, then `--live --publish`, then `node scripts/audit-manatal.mjs`. When the
 list says every city has a posting, add more cities with `--cities-file`.
 
