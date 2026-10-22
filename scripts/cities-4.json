@@ -1,0 +1,402 @@
+[
+  {
+    "city": "Hillsboro",
+    "state": "Oregon"
+  },
+  {
+    "city": "Thornton",
+    "state": "Colorado"
+  },
+  {
+    "city": "Sheridan",
+    "state": "Wyoming"
+  },
+  {
+    "city": "Harrisonburg",
+    "state": "Virginia"
+  },
+  {
+    "city": "Dothan",
+    "state": "Alabama"
+  },
+  {
+    "city": "Thousand Oaks",
+    "state": "California"
+  },
+  {
+    "city": "Odessa",
+    "state": "Texas"
+  },
+  {
+    "city": "Kingsport",
+    "state": "Tennessee"
+  },
+  {
+    "city": "Frisco",
+    "state": "Texas"
+  },
+  {
+    "city": "Charlottesville",
+    "state": "Virginia"
+  },
+  {
+    "city": "Bowie",
+    "state": "Maryland"
+  },
+  {
+    "city": "Fort Myers",
+    "state": "Florida"
+  },
+  {
+    "city": "Greeley",
+    "state": "Colorado"
+  },
+  {
+    "city": "Mobile",
+    "state": "Alabama"
+  },
+  {
+    "city": "Waterloo",
+    "state": "Iowa"
+  },
+  {
+    "city": "Pocatello",
+    "state": "Idaho"
+  },
+  {
+    "city": "Bartlett",
+    "state": "Tennessee"
+  },
+  {
+    "city": "Joplin",
+    "state": "Missouri"
+  },
+  {
+    "city": "Roanoke",
+    "state": "Virginia"
+  },
+  {
+    "city": "Olive Branch",
+    "state": "Mississippi"
+  },
+  {
+    "city": "Gastonia",
+    "state": "North Carolina"
+  },
+  {
+    "city": "Bethlehem",
+    "state": "Pennsylvania"
+  },
+  {
+    "city": "Council Bluffs",
+    "state": "Iowa"
+  },
+  {
+    "city": "Manassas",
+    "state": "Virginia"
+  },
+  {
+    "city": "Oceanside",
+    "state": "California"
+  },
+  {
+    "city": "Augusta",
+    "state": "Maine"
+  },
+  {
+    "city": "Conway",
+    "state": "Arkansas"
+  },
+  {
+    "city": "Visalia",
+    "state": "California"
+  },
+  {
+    "city": "Santa Rosa",
+    "state": "California"
+  },
+  {
+    "city": "Gaithersburg",
+    "state": "Maryland"
+  },
+  {
+    "city": "Sioux City",
+    "state": "Iowa"
+  },
+  {
+    "city": "Schaumburg",
+    "state": "Illinois"
+  },
+  {
+    "city": "Longmont",
+    "state": "Colorado"
+  },
+  {
+    "city": "Hattiesburg",
+    "state": "Mississippi"
+  },
+  {
+    "city": "Beaumont",
+    "state": "Texas"
+  },
+  {
+    "city": "Greenville",
+    "state": "South Carolina"
+  },
+  {
+    "city": "Killeen",
+    "state": "Texas"
+  },
+  {
+    "city": "Manhattan",
+    "state": "Kansas"
+  },
+  {
+    "city": "Warwick",
+    "state": "Rhode Island"
+  },
+  {
+    "city": "Palm Bay",
+    "state": "Florida"
+  },
+  {
+    "city": "Federal Way",
+    "state": "Washington"
+  },
+  {
+    "city": "Bend",
+    "state": "Oregon"
+  },
+  {
+    "city": "New Haven",
+    "state": "Connecticut"
+  },
+  {
+    "city": "Butte",
+    "state": "Montana"
+  },
+  {
+    "city": "Decatur",
+    "state": "Alabama"
+  },
+  {
+    "city": "Dubuque",
+    "state": "Iowa"
+  },
+  {
+    "city": "Grand Forks",
+    "state": "North Dakota"
+  },
+  {
+    "city": "Ocala",
+    "state": "Florida"
+  },
+  {
+    "city": "O'Fallon",
+    "state": "Missouri"
+  },
+  {
+    "city": "Kalamazoo",
+    "state": "Michigan"
+  },
+  {
+    "city": "Houma",
+    "state": "Louisiana"
+  },
+  {
+    "city": "Parma",
+    "state": "Ohio"
+  },
+  {
+    "city": "Parkersburg",
+    "state": "West Virginia"
+  },
+  {
+    "city": "Clearwater",
+    "state": "Florida"
+  },
+  {
+    "city": "Paducah",
+    "state": "Kentucky"
+  },
+  {
+    "city": "Fort Smith",
+    "state": "Arkansas"
+  },
+  {
+    "city": "Pittsburgh",
+    "state": "Pennsylvania"
+  },
+  {
+    "city": "Eden Prairie",
+    "state": "Minnesota"
+  },
+  {
+    "city": "Lima",
+    "state": "Ohio"
+  },
+  {
+    "city": "Olathe",
+    "state": "Kansas"
+  },
+  {
+    "city": "Yakima",
+    "state": "Washington"
+  },
+  {
+    "city": "Champaign",
+    "state": "Illinois"
+  },
+  {
+    "city": "Olympia",
+    "state": "Washington"
+  },
+  {
+    "city": "Surprise",
+    "state": "Arizona"
+  },
+  {
+    "city": "Bangor",
+    "state": "Maine"
+  },
+  {
+    "city": "Grand Junction",
+    "state": "Colorado"
+  },
+  {
+    "city": "Hoover",
+    "state": "Alabama"
+  },
+  {
+    "city": "Scottsdale",
+    "state": "Arizona"
+  },
+  {
+    "city": "Bloomington",
+    "state": "Illinois"
+  },
+  {
+    "city": "St. Charles",
+    "state": "Missouri"
+  },
+  {
+    "city": "Renton",
+    "state": "Washington"
+  },
+  {
+    "city": "Elgin",
+    "state": "Illinois"
+  },
+  {
+    "city": "Coeur d'Alene",
+    "state": "Idaho"
+  },
+  {
+    "city": "Paterson",
+    "state": "New Jersey"
+  },
+  {
+    "city": "South Burlington",
+    "state": "Vermont"
+  },
+  {
+    "city": "Idaho Falls",
+    "state": "Idaho"
+  },
+  {
+    "city": "Lexington",
+    "state": "Kentucky"
+  },
+  {
+    "city": "Owensboro",
+    "state": "Kentucky"
+  },
+  {
+    "city": "Warren",
+    "state": "Michigan"
+  },
+  {
+    "city": "Carson City",
+    "state": "Nevada"
+  },
+  {
+    "city": "Kalispell",
+    "state": "Montana"
+  },
+  {
+    "city": "Troy",
+    "state": "Michigan"
+  },
+  {
+    "city": "Quincy",
+    "state": "Massachusetts"
+  },
+  {
+    "city": "Norman",
+    "state": "Oklahoma"
+  },
+  {
+    "city": "Rock Springs",
+    "state": "Wyoming"
+  },
+  {
+    "city": "Avondale",
+    "state": "Arizona"
+  },
+  {
+    "city": "Rio Rancho",
+    "state": "New Mexico"
+  },
+  {
+    "city": "Alpharetta",
+    "state": "Georgia"
+  },
+  {
+    "city": "Youngstown",
+    "state": "Ohio"
+  },
+  {
+    "city": "South Portland",
+    "state": "Maine"
+  },
+  {
+    "city": "Fishers",
+    "state": "Indiana"
+  },
+  {
+    "city": "Lafayette",
+    "state": "Indiana"
+  },
+  {
+    "city": "State College",
+    "state": "Pennsylvania"
+  },
+  {
+    "city": "Elizabeth",
+    "state": "New Jersey"
+  },
+  {
+    "city": "Medford",
+    "state": "Oregon"
+  },
+  {
+    "city": "Woodbury",
+    "state": "Minnesota"
+  },
+  {
+    "city": "Wheeling",
+    "state": "West Virginia"
+  },
+  {
+    "city": "Gillette",
+    "state": "Wyoming"
+  },
+  {
+    "city": "Jacksonville",
+    "state": "North Carolina"
+  },
+  {
+    "city": "Minot",
+    "state": "North Dakota"
+  }
+]
