@@ -6,12 +6,16 @@
 //   node scripts/prune-jobs.mjs --title "First Responders" --republish --live # re-render from the current record
 //   node scripts/prune-jobs.mjs --ids 4410630 --delete --live --confirm-delete # permanent
 //   node scripts/prune-jobs.mjs --clone-drafts --delete                        # every UNPUBLISHED job with a city (clone-jobs leftovers); live ones are never selected
+//   node scripts/prune-jobs.mjs --oldest-city-jobs 95 --unpublish             # the 95 oldest LIVE city postings (never the templates); reversible
 //
 // Pick the gentlest action that works: unpublish, then republish, before you ever delete.
 // --delete saves a full copy of every job it removes to deleted-jobs-<timestamp>.json first,
 // so a deleted posting can be recreated; Manatal itself offers no undo. --delete also refuses any
 // job that has applicants (Manatal may delete a job's applications with it) unless you add
 // --include-applicants.
+//
+// --publish with --clone-drafts skips a draft whose city already has a live posting (a deliberate
+// unpublished extra, such as a repeated city), so it only publishes drafts that are the city's only posting.
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './env.mjs';
@@ -28,10 +32,12 @@ const title = value('--title');
 const duplicateCities = flag('--duplicate-cities'); // every posting in a city except the oldest one
 const inStates = parseStates(value('--in-states')).map((x) => x.toLowerCase());
 const cloneDrafts = flag('--clone-drafts'); // unpublished jobs that have a city set: what clone-jobs creates before publishing
+const oldestN = value('--oldest-city-jobs') === undefined ? 0 : Number(value('--oldest-city-jobs')); // the N oldest live postings that have a city
 
-const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text" | --clone-drafts | --duplicate-cities | --in-states "Hawaii,NY") (--unpublish | --republish | --publish | --delete) [--live] [--confirm-delete] [--include-applicants] [--include-live]`); process.exit(1); };
+const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text" | --clone-drafts | --duplicate-cities | --in-states "Hawaii,NY" | --oldest-city-jobs N) (--unpublish | --republish | --publish | --delete) [--live] [--confirm-delete] [--include-applicants] [--include-live]`); process.exit(1); };
 if (actions.length !== 1) usage('Choose exactly one of --unpublish, --republish, --delete.');
-if (!ids.length && !title && !cloneDrafts && !duplicateCities && !inStates.length) usage('Say which jobs: --ids, --title, --clone-drafts, --duplicate-cities or --in-states.');
+if (value('--oldest-city-jobs') !== undefined && (!Number.isInteger(oldestN) || oldestN < 1)) usage('--oldest-city-jobs must be a whole number of 1 or more.');
+if (!ids.length && !title && !cloneDrafts && !duplicateCities && !inStates.length && !oldestN) usage('Say which jobs: --ids, --title, --clone-drafts, --duplicate-cities, --in-states or --oldest-city-jobs.');
 if (ids.some(Number.isNaN)) usage('--ids must be comma-separated job ids.');
 if (title && title.length < 6) usage('--title is matched as a substring; use at least 6 characters so it cannot match half the account by accident.');
 const action = actions[0];
@@ -44,9 +50,14 @@ const wanted = new Set(ids);
 // The oldest posting (lowest id) in each city is the one that stays when --duplicate-cities is used.
 const oldestInCity = new Map();
 for (const j of all) if (j.city) { const k = `${j.city}|${j.state}`.toLowerCase(); if (!oldestInCity.has(k) || j.id < oldestInCity.get(k)) oldestInCity.set(k, j.id); }
+// Cities that already have a live posting, and the N oldest live city postings (lowest ids; templates have no city, so never included).
+const placeOf = (j) => `${j.city}|${j.state}`.toLowerCase();
+const liveInCity = new Set(all.filter((j) => j.city && j.is_published).map(placeOf));
+const oldestSet = new Set(oldestN ? all.filter((j) => j.city && j.is_published).sort((a, b) => a.id - b.id).slice(0, oldestN).map((j) => j.id) : []);
 const selected = all.filter((j) => wanted.has(j.id)
   || (title && j.position_name.toLowerCase().includes(title.toLowerCase()))
-  || (cloneDrafts && j.city && !j.is_published)
+  || (cloneDrafts && j.city && !j.is_published && !(action === '--publish' && liveInCity.has(placeOf(j))))
+  || oldestSet.has(j.id)
   || (duplicateCities && j.city && oldestInCity.get(`${j.city}|${j.state}`.toLowerCase()) !== j.id)
   || (inStates.length && j.city && inStates.includes((j.state || '').toLowerCase())));
 // A job the list doesn't return can still be fetched directly by id.

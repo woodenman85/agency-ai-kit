@@ -112,4 +112,34 @@ try {
   } else console.log(`\nApplicants: could not be read (HTTP ${res.status}).`);
 } catch (e) { console.log(`\nApplicants: could not be read (${e.message}).`); }
 
+// Where the applications land: live postings grouped by the day they were created. Counts only.
+try {
+  const since = new Date(Date.now() - 14 * 86400000).toISOString();
+  const matches = [];
+  let more = true, total = null;
+  for (let page = 1; more && page <= 60; page++) {
+    const r = await api(`matches/?created_at__gte=${encodeURIComponent(since)}&page=${page}&page_size=100`);
+    if (!r.ok) { if (page === 1) throw new Error(`HTTP ${r.status}`); break; }
+    const j = await r.json(); total = j.count ?? total; matches.push(...j.results); more = Boolean(j.next);
+    await pause(150);
+  }
+  const honored = matches.every((m) => !m.created_at || Date.parse(m.created_at) >= Date.parse(since) - 1000);
+  if (!honored) console.log('\nApplications by posting: Manatal ignored the date filter, so this was skipped.');
+  else if (matches.length) {
+    const per = new Map();
+    for (const m of matches) { const id = m.job_id ?? m.job; per.set(id, (per.get(id) || 0) + 1); }
+    const groups = new Map();
+    for (const j of cityJobs.filter((x) => x.is_published)) {
+      const d = (j.created_at || '').slice(0, 10), n = per.get(j.id) || 0;
+      const g = groups.get(d) || { postings: 0, apps: 0, none: 0 };
+      g.postings++; g.apps += n; if (!n) g.none++;
+      groups.set(d, g);
+    }
+    console.log(`\nApplications in the last 14 days, by the day each live city posting was created${total && total > matches.length ? ` (covers ${matches.length} of ${total})` : ''}:`);
+    for (const [d, g] of [...groups].sort()) console.log(`  ${d.slice(5)}  ${String(g.postings).padStart(3)} postings  ${String(g.apps).padStart(5)} applications  ${(g.apps / g.postings).toFixed(1).padStart(5)} per posting  ${String(g.none).padStart(3)} with none`);
+    const onTemplates = templates.reduce((a, t) => a + (per.get(t.id) || 0), 0);
+    if (onTemplates) console.log(`  the ${templates.length} templates (no city): ${onTemplates} applications`);
+  }
+} catch (e) { console.log(`\nApplications by posting: could not be read (${e.message}).`); }
+
 console.log('\nNothing was changed.');

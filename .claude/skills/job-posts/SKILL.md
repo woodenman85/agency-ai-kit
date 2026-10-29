@@ -109,8 +109,13 @@ survives both. `--delete` needs `--live --confirm-delete`, saves the full record
 `deleted-jobs-*.json` first, and refuses any job that has applicants (Manatal may delete a
 job's applications with it) unless you add `--include-applicants`, or any LIVE job unless you add
 `--include-live`. Selectors besides `--ids` and `--title`: `--clone-drafts` (unpublished jobs with a
-city), `--duplicate-cities` (every posting in a city except the lowest id), and `--in-states
-"Hawaii,NY,AK"`. `--publish` is a fourth action, for drafts Manatal created unpublished.
+city), `--duplicate-cities` (every posting in a city except the lowest id), `--in-states
+"Hawaii,NY,AK"`, and `--oldest-city-jobs N` (the N oldest LIVE city postings; templates have no city,
+so they are never picked). `--publish` is a fourth action, for drafts Manatal created unpublished;
+with `--clone-drafts` it skips a draft whose city already has a live posting, so deliberate extras
+stay unpublished. An unpublished posting still counts as that city's posting, so `clone-jobs` never
+reuses the city. Rotate out old postings by unpublishing (reversible, keeps applicants); applicants
+block deleting, because Manatal may delete their applications with the job.
 
 `node scripts/clone-jobs.mjs` copies the reviewed template postings (the jobs with no city) to
 more cities word for word; dry run by default, `--live` to create, `--publish` to make them
@@ -136,7 +141,8 @@ text over deleting a posting.
 
 `node scripts/status-manatal.mjs` is the read-only snapshot to paste into a chat: templates, live
 and draft postings by title, repeated cities, postings in states the user excluded, cities left in
-each pool, the fields the API exposes on a job, and recent applicants by source (counts only).
+each pool, the fields the API exposes on a job, recent applicants by day and source, and applications per
+posting grouped by the day the posting was created (counts only), which shows whether old postings still earn applicants.
 
 `node scripts/audit-manatal.mjs` is the read-only check: it scans every job and the
 company profile for the flagged wording, and exits non-zero if anything is flagged or
