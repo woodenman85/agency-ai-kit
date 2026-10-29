@@ -110,8 +110,9 @@ survives both. `--delete` needs `--live --confirm-delete`, saves the full record
 job's applications with it) unless you add `--include-applicants`, or any LIVE job unless you add
 `--include-live`. Selectors besides `--ids` and `--title`: `--clone-drafts` (unpublished jobs with a
 city), `--duplicate-cities` (every posting in a city except the lowest id), `--in-states
-"Hawaii,NY,AK"`, and `--oldest-city-jobs N` (the N oldest LIVE city postings; templates have no city,
-so they are never picked). `--publish` is a fourth action, for drafts Manatal created unpublished;
+"Hawaii,NY,AK"`, and `--oldest-city-jobs N` (the N oldest LIVE city postings) and `--created-before YYYY-MM-DD`
+(every city posting created before that UTC date, live or not, so the same batch can be unpublished and
+then deleted); templates have no city, so they are never picked. `--publish` is a fourth action, for drafts Manatal created unpublished;
 with `--clone-drafts` it skips a draft whose city already has a live posting, so deliberate extras
 stay unpublished. An unpublished posting still counts as that city's posting, so `clone-jobs` never
 reuses the city. Rotate out old postings by unpublishing (reversible, keeps applicants); applicants
