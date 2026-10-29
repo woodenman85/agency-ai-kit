@@ -16,6 +16,12 @@
 // --next N skips the bookkeeping: it takes the next N cities in the list that have no posting yet, so
 // every wave is the identical command. It cannot be combined with --cities or --offset.
 //
+// --rotate (with --next N) lets a city come back once it has no LIVE posting. Never-posted cities go
+// first, then the cities whose last posting is oldest; each wave is spread across states, shuffled
+// with a seed (today's date, or --seed X, so a preview and the live run match), and a reused city gets
+// a different title than its last posting. At most one live posting per city, always:
+//   node scripts/clone-jobs.mjs --rotate --next 100 --cities-file scripts/cities-all.json --titles-file scripts/titles-2.json --live --publish
+//
 // --titles-file maps each template's current title to a new one ({"old title": "new title", ...}).
 // The new title replaces only the title; the approved description is copied untouched. Every template
 // must be mapped, so a typo can't quietly leave one behind.
@@ -42,13 +48,16 @@ const OFFSET = Number(value('--offset') || 0);
 const citiesFile = value('--cities-file') || path.join(ROOT, 'scripts/cities.json');
 const titlesFile = value('--titles-file');
 const NEXT = value('--next') === undefined ? null : Number(value('--next'));
+const ROTATE = has('--rotate');
+const SEED = value('--seed') || new Date().toISOString().slice(0, 10);
 const sourceIds = (value('--source-ids') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 
-const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/clone-jobs.mjs --cities N [--offset N] [--cities-file path] [--exclude-states "Hawaii,NY"] [--source-ids 1,2,3] [--titles-file path] [--live] [--publish]\n       node scripts/clone-jobs.mjs --next N [--cities-file path] [--titles-file path] [--exclude-states "..."] [--live] [--publish]`); process.exit(1); };
+const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/clone-jobs.mjs --cities N [--offset N] [--cities-file path] [--exclude-states "Hawaii,NY"] [--source-ids 1,2,3] [--titles-file path] [--live] [--publish]\n       node scripts/clone-jobs.mjs --next N [--cities-file path] [--titles-file path] [--exclude-states "..."] [--rotate] [--seed text] [--live] [--publish]`); process.exit(1); };
 if (!Number.isInteger(COUNT) || COUNT < 1) usage('--cities must be a whole number of 1 or more.');
 if (!Number.isInteger(OFFSET) || OFFSET < 0) usage('--offset must be 0 or more.');
 if (PUBLISH && !LIVE) usage('--publish only applies with --live.');
 if (NEXT !== null && (!Number.isInteger(NEXT) || NEXT < 1)) usage('--next must be a whole number of 1 or more.');
+if (ROTATE && NEXT === null) usage('--rotate needs --next N.');
 if (NEXT !== null && (value('--cities') !== undefined || value('--offset') !== undefined)) usage('--next picks its own cities, so it cannot be combined with --cities or --offset.');
 
 const allCities = JSON.parse(fs.readFileSync(citiesFile, 'utf8'));
@@ -98,24 +107,85 @@ if (titlesFile) {
 
 const placeKey = (city, state) => `${city || ''}|${state || ''}`.toLowerCase();
 const hasPosting = new Set(all.filter((j) => j.city).map((j) => placeKey(j.city, j.state)));
-const chosen = NEXT !== null ? cities.filter((c) => !hasPosting.has(placeKey(c.city, c.state))).slice(0, NEXT) : cities.slice(OFFSET, OFFSET + COUNT);
-if (NEXT !== null && !chosen.length) { console.log(`Every city in ${path.basename(citiesFile)} already has a posting (${cities.length} cities). Add more with --cities-file.`); process.exit(0); }
+
+// What each city has had before: is anything live now, when was it last posted, and under what title.
+const history = new Map();
+for (const j of all) if (j.city) {
+  const k = placeKey(j.city, j.state), h = history.get(k) || { live: false, last: 0, lastTitle: '' };
+  if (j.is_published) h.live = true;
+  const t = Date.parse(j.created_at) || 0;
+  if (t >= h.last) { h.last = t; h.lastTitle = j.position_name; }
+  history.set(k, h);
+}
+
+// Seeded shuffle: the same seed always gives the same order, so a preview matches the live run.
+const makeRand = (str) => { let h = 1779033703 ^ str.length; for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); } return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; }; };
+const rand = makeRand(SEED);
+const shuffle = (a) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+// One city per state per round, states in random order, each state's cities in the order given.
+const spread = (list, n) => {
+  const byState = new Map();
+  for (const c of list) { const k = c.state.toLowerCase(); byState.set(k, [...(byState.get(k) || []), c]); }
+  const states = shuffle([...byState.keys()]), out = [];
+  while (out.length < n && states.some((k) => byState.get(k).length)) for (const k of states) { if (out.length >= n) break; const q = byState.get(k); if (q.length) out.push(q.shift()); }
+  return out;
+};
+
+let chosen, rotation = null;
+if (ROTATE) {
+  const eligible = cities.filter((c) => !history.get(placeKey(c.city, c.state))?.live);
+  const never = shuffle(eligible.filter((c) => !history.has(placeKey(c.city, c.state))));
+  const before = eligible.filter((c) => history.has(placeKey(c.city, c.state)));
+  chosen = spread(never, NEXT);
+  const fresh = chosen.length;
+  // Reuse the oldest batch first (cities whose last posting went up on the same day are one batch), spread across states.
+  const batches = new Map();
+  for (const c of before) { const d = Math.floor(history.get(placeKey(c.city, c.state)).last / 86400000); batches.set(d, [...(batches.get(d) || []), c]); }
+  for (const d of [...batches.keys()].sort((a, b) => a - b)) {
+    if (chosen.length >= NEXT) break;
+    chosen.push(...spread(shuffle(batches.get(d)), NEXT - chosen.length));
+  }
+  rotation = { total: cities.length, live: cities.length - eligible.length, never: never.length, before: before.length, fresh, reused: chosen.length - fresh };
+  if (!chosen.length) { console.log(`Every city in ${path.basename(citiesFile)} has a live posting right now (${cities.length} cities). Unpublish some, or add cities with --cities-file.`); process.exit(0); }
+} else {
+  chosen = NEXT !== null ? cities.filter((c) => !hasPosting.has(placeKey(c.city, c.state))).slice(0, NEXT) : cities.slice(OFFSET, OFFSET + COUNT);
+  if (NEXT !== null && !chosen.length) { console.log(`Every city in ${path.basename(citiesFile)} already has a posting (${cities.length} cities). Add more with --cities-file, or use --rotate to reuse cities that are no longer live.`); process.exit(0); }
+}
+
 const plan = [];
+let ti = Math.floor(rand() * templates.length);
 for (const c of chosen) {
-  if (hasPosting.has(placeKey(c.city, c.state))) continue; // one posting per city, whatever its title
-  const t = templates[originalIndex.get(placeKey(c.city, c.state)) % templates.length];
+  const k = placeKey(c.city, c.state);
+  let t;
+  if (ROTATE) {
+    // next template in turn, but never the title this city last used
+    const prev = history.get(k)?.lastTitle || '';
+    for (let n = 0; n < templates.length && !t; n++) {
+      const cand = templates[(ti + n) % templates.length];
+      if (cand.position_name !== prev && newTitle(cand) !== prev) { t = cand; ti += n + 1; }
+    }
+    if (!t) { t = templates[ti % templates.length]; ti++; }
+  } else {
+    if (hasPosting.has(k)) continue; // one posting per city, whatever its title
+    t = templates[originalIndex.get(k) % templates.length];
+  }
   if (new RegExp(`\\b${c.city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(newTitle(t))) { console.error(`Title "${newTitle(t)}" contains the city ${c.city}. The city belongs in the city field.`); process.exit(1); }
-  plan.push({ t, c });
+  plan.push({ t, c, again: ROTATE && history.has(k) ? history.get(k).last : 0 });
 }
 
 console.log(`${templates.length} template(s):`);
 for (const t of templates) console.log(`  ${String(t.id).padEnd(9)} ${t.position_name}${newTitle(t) !== t.position_name ? `  ->  ${newTitle(t)}` : ''}`);
 if (excluded.length) console.log(`\nExcluding ${excluded.join(', ')}: ${removedByState} cities removed from the list.`);
 if (listedTwice) console.log(`\nNote: ${path.basename(citiesFile)} lists ${listedTwice} city entr${listedTwice === 1 ? 'y' : 'ies'} more than once; each city is used once.`);
-if (NEXT !== null) { const open = cities.filter((c) => !hasPosting.has(placeKey(c.city, c.state))).length; console.log(`\n${cities.length - open} of the ${cities.length} cities in ${path.basename(citiesFile)} already have a posting; ${open} are still open.`); }
-console.log(`\n${chosen.length} cit${chosen.length === 1 ? 'y' : 'ies'} (${NEXT !== null ? `the next ${NEXT} without a posting` : `list positions ${OFFSET + 1}-${OFFSET + chosen.length}`}); ${chosen.length - plan.length} already have a posting and will be skipped.`);
+if (ROTATE) {
+  console.log(`\nRotation (seed ${SEED}), ${path.basename(citiesFile)}: ${rotation.live} of ${rotation.total} cities have a live posting now and are skipped; ${rotation.never} never posted; ${rotation.before} posted before but not live.`);
+  console.log(`This wave: ${rotation.fresh} first-time cities and ${rotation.reused} reused (oldest-posted first), spread over ${new Set(chosen.map((c) => c.state)).size} states.`);
+} else {
+  if (NEXT !== null) { const open = cities.filter((c) => !hasPosting.has(placeKey(c.city, c.state))).length; console.log(`\n${cities.length - open} of the ${cities.length} cities in ${path.basename(citiesFile)} already have a posting; ${open} are still open.`); }
+  console.log(`\n${chosen.length} cit${chosen.length === 1 ? 'y' : 'ies'} (${NEXT !== null ? `the next ${NEXT} without a posting` : `list positions ${OFFSET + 1}-${OFFSET + chosen.length}`}); ${chosen.length - plan.length} already have a posting and will be skipped.`);
+}
 console.log(`${plan.length} to create${LIVE ? (PUBLISH ? ', PUBLIC immediately' : ' as unpublished drafts') : ''}\n`);
-for (const { t, c } of plan.slice(0, 12)) console.log(`  ${(c.city + ', ' + c.state).padEnd(30)} ${newTitle(t)}`);
+for (const { t, c, again } of plan.slice(0, 12)) console.log(`  ${(c.city + ', ' + c.state).padEnd(30)} ${newTitle(t)}${again ? `   (reused; last posted ${new Date(again).toISOString().slice(5, 10)})` : ''}`);
 if (plan.length > 12) console.log(`  …and ${plan.length - 12} more`);
 if (!LIVE) { console.log('\nDry run — nothing was created. Add --live to create drafts, --live --publish to go public.'); process.exit(0); }
 if (!plan.length) process.exit(0);

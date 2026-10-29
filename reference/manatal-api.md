@@ -117,6 +117,9 @@ What follows for this kit:
   (new titles on the same approved bodies). Manatal can create a job as a draft
   even when `is_published: true` is sent, so clone-jobs publishes those in a second step.
   Clean up with `prune-jobs --duplicate-cities`, `--in-states`, `--clone-drafts`, `--publish`.
+  Retire old postings by unpublishing (`--created-before`, `--oldest-city-jobs`), not deleting: Manatal may
+  delete a job's applications with it, and the delete preview showed the oldest batch holds many. Reuse their
+  cities with `clone-jobs --rotate` (one live posting per city, oldest batch first).
 - Fix text with `node scripts/edit-jobs.mjs` (find and replace in descriptions; reads
   each record back to confirm the edit landed). The company profile has its own tool,
   `node scripts/edit-organization.mjs`, same dry-run-first behaviour.

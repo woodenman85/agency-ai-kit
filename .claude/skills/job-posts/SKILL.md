@@ -109,13 +109,13 @@ survives both. `--delete` needs `--live --confirm-delete`, saves the full record
 `deleted-jobs-*.json` first, and refuses any job that has applicants (Manatal may delete a
 job's applications with it) unless you add `--include-applicants`, or any LIVE job unless you add
 `--include-live`. Selectors besides `--ids` and `--title`: `--clone-drafts` (unpublished jobs with a
-city), `--duplicate-cities` (every posting in a city except the lowest id), `--in-states
+city), `--duplicate-cities` (every LIVE posting in a city except the lowest live id), `--in-states
 "Hawaii,NY,AK"`, and `--oldest-city-jobs N` (the N oldest LIVE city postings) and `--created-before YYYY-MM-DD`
 (every city posting created before that UTC date, live or not, so the same batch can be unpublished and
 then deleted); templates have no city, so they are never picked. `--publish` is a fourth action, for drafts Manatal created unpublished;
 with `--clone-drafts` it skips a draft whose city already has a live posting, so deliberate extras
-stay unpublished. An unpublished posting still counts as that city's posting, so `clone-jobs` never
-reuses the city. Rotate out old postings by unpublishing (reversible, keeps applicants); applicants
+stay unpublished. Without `--rotate`, an unpublished posting still counts as that city's posting, so
+`clone-jobs` does not reuse the city; with `--rotate` a city comes back once nothing in it is live. Rotate out old postings by unpublishing (reversible, keeps applicants); applicants
 block deleting, because Manatal may delete their applications with the job.
 
 `node scripts/clone-jobs.mjs` copies the reviewed template postings (the jobs with no city) to
@@ -125,6 +125,14 @@ skipped, and a city's template is fixed by its place in the city list, so reruns
 `--exclude-states "Hawaii,NY,AK"` (names or two-letter codes) never shuffle or double up. It
 refuses to clone a template containing flagged wording, and refuses to create anything if the
 job list is incomplete (the duplicate check can't be trusted).
+
+**Rotation (reusing cities).** `node scripts/clone-jobs.mjs --rotate --next 100 --cities-file
+scripts/cities-all.json --titles-file scripts/titles-2.json` (add `--live --publish` to create) picks cities
+that have no LIVE posting: never-posted cities first, then the oldest batch of previously posted ones, spread
+across states, shuffled with a seed (today's date, or `--seed X`, so a preview and the live run match). A
+reused city never gets the title of its previous posting, and no city ever has two live postings.
+`scripts/cities-all.json` is 925 cities across 47 states (no HI/AK/NY). Rotate old postings out with
+`prune-jobs --created-before DATE --unpublish`; do not delete them, because deleting a job may delete its applications.
 
 **Regular waves.** `--next N` takes the next N cities in the list that have no posting yet, so every
 wave is the same command; `--titles-file scripts/titles-2.json` gives the templates new titles

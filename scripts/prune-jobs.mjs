@@ -30,7 +30,7 @@ const LIVE = flag('--live');
 const actions = ['--unpublish', '--republish', '--publish', '--delete'].filter(flag);
 const ids = (value('--ids') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const title = value('--title');
-const duplicateCities = flag('--duplicate-cities'); // every posting in a city except the oldest one
+const duplicateCities = flag('--duplicate-cities'); // every LIVE posting in a city except the oldest live one
 const inStates = parseStates(value('--in-states')).map((x) => x.toLowerCase());
 const cloneDrafts = flag('--clone-drafts'); // unpublished jobs that have a city set: what clone-jobs creates before publishing
 const createdBefore = value('--created-before'); // YYYY-MM-DD, UTC
@@ -50,9 +50,10 @@ const { rows: all, count, complete } = await fetchAll('jobs/');
 if (!complete) console.error(`Warning: Manatal reports ${count} jobs but the list returned only ${all.length}. --ids still reaches a job the list misses; --title can only match the ${all.length} it returned.\n`);
 
 const wanted = new Set(ids);
-// The oldest posting (lowest id) in each city is the one that stays when --duplicate-cities is used.
+// The oldest LIVE posting (lowest id) in each city is the one that stays when --duplicate-cities is used.
+// Unpublished postings are ignored, so a reused city (old one unpublished, new one live) is not a duplicate.
 const oldestInCity = new Map();
-for (const j of all) if (j.city) { const k = `${j.city}|${j.state}`.toLowerCase(); if (!oldestInCity.has(k) || j.id < oldestInCity.get(k)) oldestInCity.set(k, j.id); }
+for (const j of all) if (j.city && j.is_published) { const k = `${j.city}|${j.state}`.toLowerCase(); if (!oldestInCity.has(k) || j.id < oldestInCity.get(k)) oldestInCity.set(k, j.id); }
 // Cities that already have a live posting, and the N oldest live city postings (lowest ids; templates have no city, so never included).
 const placeOf = (j) => `${j.city}|${j.state}`.toLowerCase();
 const liveInCity = new Set(all.filter((j) => j.city && j.is_published).map(placeOf));
@@ -62,7 +63,7 @@ const selected = all.filter((j) => wanted.has(j.id)
   || (cloneDrafts && j.city && !j.is_published && !(action === '--publish' && liveInCity.has(placeOf(j))))
   || oldestSet.has(j.id)
   || (createdBefore && j.city && Date.parse(j.created_at) < Date.parse(`${createdBefore}T00:00:00Z`))
-  || (duplicateCities && j.city && oldestInCity.get(`${j.city}|${j.state}`.toLowerCase()) !== j.id)
+  || (duplicateCities && j.city && j.is_published && oldestInCity.get(`${j.city}|${j.state}`.toLowerCase()) !== j.id)
   || (inStates.length && j.city && inStates.includes((j.state || '').toLowerCase())));
 // A job the list doesn't return can still be fetched directly by id.
 const missing = [];

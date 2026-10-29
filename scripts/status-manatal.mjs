@@ -46,13 +46,14 @@ console.log(`Postings in Hawaii / Alaska / New York: ${banned.length}${banned.le
 console.log(`Postings with the city in the title: ${cityInTitle.length}`);
 console.log(`Jobs with flagged wording (commission / salary / hourly / pay figure): ${jobs.filter((j) => FLAGS.test(`${j.position_name} ${(j.description || '').replace(/<[^>]+>/g, ' ')}`)).length}`);
 
-console.log('\nCity pools (cities still without a posting, excluding Hawaii / Alaska / New York):');
-const poolFiles = fs.readdirSync(path.join(ROOT, 'scripts')).filter((f) => /^cities(-\d+)?\.json$/.test(f)).sort((a, b) => parseInt(a.replace(/\D/g, '') || '1') - parseInt(b.replace(/\D/g, '') || '1'));
+console.log('\nCity pools (excluding Hawaii / Alaska / New York):');
+const poolFiles = fs.readdirSync(path.join(ROOT, 'scripts')).filter((f) => /^cities(-\d+|-all)?\.json$/.test(f)).sort((a, b) => (a.includes('all') ? 999 : parseInt(a.replace(/\D/g, '') || '1')) - (b.includes('all') ? 999 : parseInt(b.replace(/\D/g, '') || '1')));
 for (const f of poolFiles) {
   const p = path.join(ROOT, 'scripts', f);
   const list = JSON.parse(fs.readFileSync(p, 'utf8')).filter((c) => !EXCLUDED.includes(c.state.toLowerCase()));
-  const open = list.filter((c) => !perCity.has(key(c.city, c.state)));
-  console.log(`  ${f.padEnd(15)} ${list.length} usable, ${list.length - open.length} have a posting, ${open.length} left`);
+  const liveNow = list.filter((c) => liveByCity.has(key(c.city, c.state))).length;
+  const everPosted = list.filter((c) => perCity.has(key(c.city, c.state))).length;
+  console.log(`  ${f.padEnd(15)} ${list.length} usable: ${liveNow} live now, ${everPosted - liveNow} posted before (not live), ${list.length - everPosted} never posted`);
 }
 
 const sample = jobs[0];
