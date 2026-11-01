@@ -60,13 +60,23 @@ if (NEXT !== null && (!Number.isInteger(NEXT) || NEXT < 1)) usage('--next must b
 if (ROTATE && NEXT === null) usage('--rotate needs --next N.');
 if (NEXT !== null && (value('--cities') !== undefined || value('--offset') !== undefined)) usage('--next picks its own cities, so it cannot be combined with --cities or --offset.');
 
+// Manatal sometimes stores a city under a different name than we sent it (it stored "South Burlington" as
+// "Burlington"). Known renames are in scripts/city-aliases.json; any this script notices after creating a job
+// are saved to city-aliases.local.json. Each maps "asked city|state" to "stored city|state", so a renamed city
+// is recognised as the place it really is and is never posted twice.
+const ALIASES = new Map();
+for (const f of [path.join(ROOT, 'scripts/city-aliases.json'), path.join(ROOT, 'city-aliases.local.json')]) {
+  if (fs.existsSync(f)) for (const [a, b] of Object.entries(JSON.parse(fs.readFileSync(f, 'utf8')))) ALIASES.set(a.toLowerCase(), b.toLowerCase());
+}
+const canon = (k) => ALIASES.get(k) || k;
+
 const allCities = JSON.parse(fs.readFileSync(citiesFile, 'utf8'));
 const excluded = parseStates(value('--exclude-states'));
 const excludedLower = new Set(excluded.map((x) => x.toLowerCase()));
 const unknown = excluded.filter((x) => !allCities.some((c) => c.state.toLowerCase() === x.toLowerCase()));
 if (unknown.length) usage(`No cities in the list for: ${unknown.join(', ')}. Use full state names or two-letter codes.`);
 // A city listed twice in the file is used once (its first place), so one run can never post it twice.
-const placeId = (c) => `${c.city}|${c.state}`.toLowerCase();
+const placeId = (c) => canon(`${c.city}|${c.state}`.toLowerCase());
 const originalIndex = new Map();
 allCities.forEach((c, i) => { if (!originalIndex.has(placeId(c))) originalIndex.set(placeId(c), i); });
 const listedTwice = allCities.length - originalIndex.size;
@@ -105,7 +115,7 @@ if (titlesFile) {
   newTitle = (t) => map[t.position_name];
 }
 
-const placeKey = (city, state) => `${city || ''}|${state || ''}`.toLowerCase();
+const placeKey = (city, state) => canon(`${city || ''}|${state || ''}`.toLowerCase());
 const hasPosting = new Set(all.filter((j) => j.city).map((j) => placeKey(j.city, j.state)));
 
 // What each city has had before: is anything live now, when was it last posted, and under what title.
@@ -209,7 +219,9 @@ for (let i = 0; i < plan.length; i += 5) {
       }),
     });
     if (!res.ok) return { error: `HTTP ${res.status} ${await res.text()}`, label: `${t.position_name} / ${c.city}, ${c.state}` };
-    return await res.json();
+    const made = await res.json();
+    made._asked = { city: c.city, state: c.state };
+    return made;
   }));
   for (const r of results) {
     if (r.error) console.log(`  FAILED  ${r.label}: ${r.error}`);
@@ -229,6 +241,28 @@ if (PUBLISH) {
       if (i + 5 < stillDraft.length) await pause(1200);
     }
   }
+}
+// Did Manatal store each city the way we asked? A rename (South Burlington -> Burlington) would hide the city
+// from the duplicate check next time, so remember it.
+if (created.length) {
+  try {
+    const after = await fetchAll('jobs/');
+    if (after.complete) {
+      const byId = new Map(after.rows.map((j) => [j.id, j]));
+      const renamed = created.filter((j) => { const stored = byId.get(j.id); return stored && `${stored.city}|${stored.state}`.toLowerCase() !== `${j._asked.city}|${j._asked.state}`.toLowerCase(); });
+      if (renamed.length) {
+        const file = path.join(ROOT, 'city-aliases.local.json');
+        const known = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+        console.log(`\nManatal stored ${renamed.length} cit${renamed.length === 1 ? 'y' : 'ies'} under a different name than we sent (remembered in city-aliases.local.json so they are not posted twice):`);
+        for (const j of renamed) {
+          const stored = byId.get(j.id);
+          console.log(`  ${j._asked.city}, ${j._asked.state}  ->  ${stored.city}, ${stored.state}`);
+          known[`${j._asked.city}|${j._asked.state}`.toLowerCase()] = `${stored.city}|${stored.state}`.toLowerCase();
+        }
+        fs.writeFileSync(file, JSON.stringify(known, null, 2));
+      }
+    }
+  } catch (e) { console.log(`\nCould not check the stored city names (${e.message}).`); }
 }
 const livecount = created.filter((j) => j.is_published).length;
 console.log(`\n${created.length} of ${plan.length} created; ${livecount} live${livecount < created.length ? `, ${created.length - livecount} still drafts` : ''}.`);

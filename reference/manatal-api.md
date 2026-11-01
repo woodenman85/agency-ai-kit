@@ -141,6 +141,12 @@ What follows for this kit:
   reading jobs in `created_at` windows small enough to fit one page (which can't skip
   rows), and says so if it still can't match the count; every script here uses it. A job the list won't return
   can still be read, edited or deleted directly by id (`GET/PATCH/DELETE /jobs/{id}/`).
+- **Manatal can rename a city.** It stored a job sent as "South Burlington, Vermont" as "Burlington, Vermont",
+  so a duplicate check on the name we sent missed it and re-posted that city in three waves, leaving three
+  live "Burlington" postings. `clone-jobs` now reads known renames from `scripts/city-aliases.json`, re-reads
+  every job it creates to catch new ones (saved to the untracked `city-aliases.local.json`), and
+  `status-manatal.mjs` lists live cities that appear in none of the city lists. Fix any repeated live city
+  with `prune-jobs --duplicate-cities --unpublish`.
 - **Rate**: batch writes in groups of ~5 with a short pause. Bursts get throttled.
 - **Pagination**: use `?page=N&page_size=50`. `offset`/`limit` are silently ignored and
   return page 1 again — trusting them makes it look like you created duplicates. Even

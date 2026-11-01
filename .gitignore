@@ -13,3 +13,5 @@ deleted-jobs-*.json
 
 node_modules/
 .DS_Store
+
+city-aliases.local.json

@@ -126,6 +126,11 @@ skipped, and a city's template is fixed by its place in the city list, so reruns
 refuses to clone a template containing flagged wording, and refuses to create anything if the
 job list is incomplete (the duplicate check can't be trusted).
 
+**City renames.** Manatal may store a city under another name (it stored "South Burlington" as "Burlington").
+`clone-jobs` treats the names in `scripts/city-aliases.json` and the learned `city-aliases.local.json` as the
+same place, and after each run re-reads what it created and records any rename it finds. After a wave, check
+`status-manatal.mjs` for "Cities with more than one LIVE posting".
+
 **Rotation (reusing cities).** `node scripts/clone-jobs.mjs --rotate --next 100 --cities-file
 scripts/cities-all.json --titles-file scripts/titles-2.json` (add `--live --publish` to create) picks cities
 that have no LIVE posting: never-posted cities first, then the oldest batch of previously posted ones, spread

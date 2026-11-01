@@ -56,6 +56,13 @@ for (const f of poolFiles) {
   console.log(`  ${f.padEnd(15)} ${list.length} usable: ${liveNow} live now, ${everPosted - liveNow} posted before (not live), ${list.length - everPosted} never posted`);
 }
 
+// Live cities whose stored name is in none of the city lists: renamed by Manatal, or posted from another list.
+const listed = new Set();
+for (const f of poolFiles) for (const c of JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts', f), 'utf8'))) listed.add(key(c.city, c.state));
+const strangers = new Map();
+for (const j of cityJobs.filter((x) => x.is_published)) if (!listed.has(key(j.city, j.state))) strangers.set(key(j.city, j.state), `${j.city}, ${j.state}`);
+console.log(`\nLive cities not in any of the city lists (renamed by Manatal, or posted from another list): ${strangers.size}${strangers.size ? ' — ' + [...strangers.values()].slice(0, 12).join('; ') + (strangers.size > 12 ? '; …' : '') : ''}`);
+
 const sample = jobs[0];
 if (sample) {
   console.log(`\nFields the API returns on a job:\n  ${Object.keys(sample).sort().join(', ')}`);
