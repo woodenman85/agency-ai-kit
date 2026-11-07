@@ -45,6 +45,13 @@ console.log(`\nCities with more than one LIVE posting: ${repeated.length}${repea
 console.log(`Postings in Hawaii / Alaska / New York: ${banned.length}${banned.length ? ' — ' + banned.slice(0, 8).map((j) => `${j.city}, ${j.state} [${j.id}]`).join('; ') : ''}`);
 console.log(`Postings with the city in the title: ${cityInTitle.length}`);
 console.log(`Jobs with flagged wording (commission / salary / hourly / pay figure): ${jobs.filter((j) => FLAGS.test(`${j.position_name} ${(j.description || '').replace(/<[^>]+>/g, ' ')}`)).length}`);
+// Drift: does each city posting still carry the text of its approved template? Edits made by other tools show up here.
+const templateFor = new Map(templates.map((t) => [t.position_name.toLowerCase(), t]));
+const titlesPath = path.join(ROOT, 'scripts/titles-2.json');
+if (fs.existsSync(titlesPath)) for (const [oldTitle, newTitle] of Object.entries(JSON.parse(fs.readFileSync(titlesPath, 'utf8')))) { const t = templates.find((x) => x.position_name === oldTitle); if (t) templateFor.set(String(newTitle).toLowerCase(), t); }
+const sameText = (a, b) => (a || '').replace(/\r\n/g, '\n').trim() === (b || '').replace(/\r\n/g, '\n').trim();
+const drifted = cityJobs.filter((j) => { const t = templateFor.get((j.position_name || '').toLowerCase()); return t && !sameText(j.description, t.description); });
+console.log(`City postings whose text differs from their approved template: ${drifted.length}${drifted.length ? '  -> node scripts/sync-descriptions.mjs --titles-file scripts/titles-2.json' : ''}`);
 
 console.log('\nCity pools (excluding Hawaii / Alaska / New York):');
 const poolFiles = fs.readdirSync(path.join(ROOT, 'scripts')).filter((f) => /^cities(-\d+|-all)?\.json$/.test(f)).sort((a, b) => (a.includes('all') ? 999 : parseInt(a.replace(/\D/g, '') || '1')) - (b.includes('all') ? 999 : parseInt(b.replace(/\D/g, '') || '1')));

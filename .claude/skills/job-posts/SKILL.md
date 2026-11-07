@@ -153,6 +153,11 @@ text over deleting a posting.
 `node scripts/edit-organization.mjs` does the same find-and-replace on the company profile
 (the "about us" text shown beside every listing), with a dry run first.
 
+`node scripts/sync-descriptions.mjs --titles-file scripts/titles-2.json` makes every city posting's description match
+its approved template word for word (dry run first, `--live` to write, each job read back). Run it whenever
+`status-manatal.mjs` reports postings whose text differs from their template. It never edits the templates and
+refuses to run if a template contains flagged wording.
+
 `node scripts/status-manatal.mjs` is the read-only snapshot to paste into a chat: templates, live
 and draft postings by title, repeated cities, postings in states the user excluded, cities left in
 each pool, the fields the API exposes on a job, recent applicants by day and source, and applications per

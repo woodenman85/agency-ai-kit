@@ -129,6 +129,18 @@ What follows for this kit:
   applicants. As of 2026-10-04 there are 39 applicants (all via ZipRecruiter on the free
   feed, all at "New Candidates") attached to 23 jobs.
 
+## Incident: postings rewritten with the flagged wording (2026-11-03)
+
+On 2026-11-03 between about 16:54 and 17:05 UTC, 582 of the 609 published jobs were edited so their last
+section read `<h3>Compensation</h3>` plus "1099 independent contractor, commission-based. No salary or hourly
+pay; earnings depend on individual production." — the wording Manatal flagged before. The templates (no city)
+were not touched. That text matches the ORIGINAL writing standard on `main`, which still tells Claude to name
+the deal as commission-based. The compliance fixes lived only on a working branch, so a session or tool
+working from `main` would write the old wording back. Who ran it was not established. Prevention: get the
+fixed rules onto `main`, and run `status-manatal.mjs` after any change (it counts postings whose text differs
+from their template). Repair: `node scripts/sync-descriptions.mjs --titles-file scripts/titles-2.json`
+(dry run first; `--live` restores the template text and reads each job back).
+
 ## Gotchas
 
 - **The company profile is part of every listing.** `GET /organizations/` →
