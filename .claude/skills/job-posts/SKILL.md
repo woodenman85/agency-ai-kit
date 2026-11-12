@@ -154,6 +154,10 @@ text over deleting a posting.
 `node scripts/edit-organization.mjs` does the same find-and-replace on the company profile
 (the "about us" text shown beside every listing), with a dry run first.
 
+`bash scripts/fix-compensation.sh [YYYY-MM-DD]` is the one-command repair for the 2026-11 incident: it replaces three versions of
+the commission-based sentence on every city posting created on or after the date, restores template text, unpublishes extra
+live copies of a city, then audits. It writes to Manatal, stops at the first failing step, and is safe to run twice.
+
 `node scripts/sync-descriptions.mjs --titles-file scripts/titles-2.json` makes every city posting's description match
 its approved template word for word (dry run first, `--live` to write, each job read back). Run it whenever
 `status-manatal.mjs` reports postings whose text differs from their template. It never edits the templates and
