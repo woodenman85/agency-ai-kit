@@ -3,6 +3,7 @@
 //
 //   node scripts/edit-jobs.mjs --title "Property and Casualty Pros" --find "no office or salary" --replace "no office"
 //   node scripts/edit-jobs.mjs --title "Property and Casualty Pros" --find "no office or salary" --replace "no office" --live
+//   node scripts/edit-jobs.mjs --created-after 2026-11-10 --find "old text" --replace "new text"   # every city posting created on or after that UTC date
 //
 // The match is literal text, not a regex, and applies to every occurrence in a description.
 // After each write the job is read back from Manatal and checked — a PATCH that returned 200
@@ -15,11 +16,13 @@ const value = (n) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : 
 const LIVE = has('--live');
 const ids = (value('--ids') || '').split(',').map((s) => s.trim()).filter(Boolean).map(Number);
 const title = value('--title');
+const createdAfter = value('--created-after'); // YYYY-MM-DD, UTC
 const find = value('--find');
 const replace = value('--replace');
 
-const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/edit-jobs.mjs (--ids 1,2,3 | --title "text") --find "old text" --replace "new text" [--live]`); process.exit(1); };
-if (!ids.length && !title) usage('Say which jobs: --ids or --title.');
+const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/edit-jobs.mjs (--ids 1,2,3 | --title "text" | --created-after YYYY-MM-DD) --find "old text" --replace "new text" [--live]`); process.exit(1); };
+if (createdAfter !== undefined && (!/^\d{4}-\d{2}-\d{2}$/.test(createdAfter) || Number.isNaN(Date.parse(`${createdAfter}T00:00:00Z`)))) usage('--created-after must be a date like 2026-11-10.');
+if (!ids.length && !title && !createdAfter) usage('Say which jobs: --ids, --title or --created-after.');
 if (ids.some(Number.isNaN)) usage('--ids must be comma-separated job ids.');
 if (title && title.length < 6) usage('--title is matched as a substring; use at least 6 characters.');
 if (!find || find.length < 4) usage('--find is required and must be at least 4 characters.');
@@ -32,7 +35,9 @@ const { rows: all, count, complete } = await fetchAll('jobs/');
 if (!complete) console.error(`Warning: Manatal reports ${count} jobs but the list returned only ${all.length}. --title can only match the ${all.length} it returned; use --ids for any other job.\n`);
 
 const wanted = new Set(ids);
-const selected = all.filter((j) => wanted.has(j.id) || (title && j.position_name.toLowerCase().includes(title.toLowerCase())));
+const selected = all.filter((j) => wanted.has(j.id)
+  || (title && j.position_name.toLowerCase().includes(title.toLowerCase()))
+  || (createdAfter && j.city && Date.parse(j.created_at) >= Date.parse(`${createdAfter}T00:00:00Z`)));
 const missing = [];
 for (const id of ids.filter((id) => !all.some((j) => j.id === id))) {
   const res = await api(`jobs/${id}/`);

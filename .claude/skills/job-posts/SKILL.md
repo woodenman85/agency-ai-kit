@@ -146,7 +146,8 @@ while the approved bodies are copied untouched (every template must be mapped, o
 plan, wait for a yes, then `--live --publish`, then `node scripts/audit-manatal.mjs`. When the
 list says every city has a posting, add more cities with `--cities-file`.
 
-`node scripts/edit-jobs.mjs` finds and replaces text in descriptions (dry run by default,
+`node scripts/edit-jobs.mjs` finds and replaces text in descriptions; select jobs with `--ids`, `--title`, or
+`--created-after YYYY-MM-DD` (every city posting created on or after that UTC date; `prune-jobs` takes the same flag) (dry run by default,
 `--live` to write) and reads every record back to confirm the edit landed. Prefer fixing
 text over deleting a posting.
 

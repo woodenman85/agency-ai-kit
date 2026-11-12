@@ -8,6 +8,7 @@
 //   node scripts/prune-jobs.mjs --clone-drafts --delete                        # every UNPUBLISHED job with a city (clone-jobs leftovers); live ones are never selected
 //   node scripts/prune-jobs.mjs --oldest-city-jobs 95 --unpublish             # the 95 oldest LIVE city postings (never the templates); reversible
 //   node scripts/prune-jobs.mjs --created-before 2026-10-06 --unpublish       # every city posting created before that UTC date, live or not (never the templates)
+//   node scripts/prune-jobs.mjs --created-after 2026-11-10 --unpublish        # every city posting created on or after that UTC date
 //
 // Pick the gentlest action that works: unpublish, then republish, before you ever delete.
 // --delete saves a full copy of every job it removes to deleted-jobs-<timestamp>.json first,
@@ -34,13 +35,15 @@ const duplicateCities = flag('--duplicate-cities'); // every LIVE posting in a c
 const inStates = parseStates(value('--in-states')).map((x) => x.toLowerCase());
 const cloneDrafts = flag('--clone-drafts'); // unpublished jobs that have a city set: what clone-jobs creates before publishing
 const createdBefore = value('--created-before'); // YYYY-MM-DD, UTC
+const createdAfter = value('--created-after'); // YYYY-MM-DD, UTC
 const oldestN = value('--oldest-city-jobs') === undefined ? 0 : Number(value('--oldest-city-jobs')); // the N oldest live postings that have a city
 
-const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text" | --clone-drafts | --duplicate-cities | --in-states "Hawaii,NY" | --oldest-city-jobs N | --created-before YYYY-MM-DD) (--unpublish | --republish | --publish | --delete) [--live] [--confirm-delete] [--include-applicants] [--include-live]`); process.exit(1); };
+const usage = (msg) => { console.error(`${msg}\n\nUsage: node scripts/prune-jobs.mjs (--ids 1,2,3 | --title "text" | --clone-drafts | --duplicate-cities | --in-states "Hawaii,NY" | --oldest-city-jobs N | --created-before YYYY-MM-DD | --created-after YYYY-MM-DD) (--unpublish | --republish | --publish | --delete) [--live] [--confirm-delete] [--include-applicants] [--include-live]`); process.exit(1); };
 if (actions.length !== 1) usage('Choose exactly one of --unpublish, --republish, --delete.');
 if (value('--oldest-city-jobs') !== undefined && (!Number.isInteger(oldestN) || oldestN < 1)) usage('--oldest-city-jobs must be a whole number of 1 or more.');
 if (createdBefore !== undefined && (!/^\d{4}-\d{2}-\d{2}$/.test(createdBefore) || Number.isNaN(Date.parse(`${createdBefore}T00:00:00Z`)))) usage('--created-before must be a date like 2026-10-06.');
-if (!ids.length && !title && !cloneDrafts && !duplicateCities && !inStates.length && !oldestN && !createdBefore) usage('Say which jobs: --ids, --title, --clone-drafts, --duplicate-cities, --in-states, --oldest-city-jobs or --created-before.');
+if (createdAfter !== undefined && (!/^\d{4}-\d{2}-\d{2}$/.test(createdAfter) || Number.isNaN(Date.parse(`${createdAfter}T00:00:00Z`)))) usage('--created-after must be a date like 2026-11-10.');
+if (!ids.length && !title && !cloneDrafts && !duplicateCities && !inStates.length && !oldestN && !createdBefore && !createdAfter) usage('Say which jobs: --ids, --title, --clone-drafts, --duplicate-cities, --in-states, --oldest-city-jobs, --created-before or --created-after.');
 if (ids.some(Number.isNaN)) usage('--ids must be comma-separated job ids.');
 if (title && title.length < 6) usage('--title is matched as a substring; use at least 6 characters so it cannot match half the account by accident.');
 const action = actions[0];
@@ -63,6 +66,7 @@ const selected = all.filter((j) => wanted.has(j.id)
   || (cloneDrafts && j.city && !j.is_published && !(action === '--publish' && liveInCity.has(placeOf(j))))
   || oldestSet.has(j.id)
   || (createdBefore && j.city && Date.parse(j.created_at) < Date.parse(`${createdBefore}T00:00:00Z`))
+  || (createdAfter && j.city && Date.parse(j.created_at) >= Date.parse(`${createdAfter}T00:00:00Z`))
   || (duplicateCities && j.city && j.is_published && oldestInCity.get(`${j.city}|${j.state}`.toLowerCase()) !== j.id)
   || (inStates.length && j.city && inStates.includes((j.state || '').toLowerCase())));
 // A job the list doesn't return can still be fetched directly by id.
