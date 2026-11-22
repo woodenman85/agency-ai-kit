@@ -7,33 +7,17 @@
 //   node scripts/post-jobs.mjs --list             # list what's already in the account
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, requireKey } from './env.mjs';
+import { ROOT } from './env.mjs';
+import { api, fetchAll, pause } from './manatal.mjs';
 
-const key = requireKey('MANATAL_API_KEY', 'Get the key in Manatal: Settings -> Integrations -> Open API. It is account-wide, so treat it like a password.');
 
 const args = new Set(process.argv.slice(2));
 const LIVE = args.has('--live');
 const PUBLISH = args.has('--publish');
 
-const api = (p, init = {}) => fetch(`https://api.manatal.com/open/v3/${p}`, {
-  ...init,
-  headers: { Authorization: `Token ${key}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
-});
-
-async function allJobs() {
-  const out = [];
-  for (let page = 1; ; page++) {
-    const res = await api(`jobs/?page=${page}&page_size=50`);
-    if (!res.ok) throw new Error(`list jobs failed: HTTP ${res.status}`);
-    const j = await res.json();
-    out.push(...j.results);
-    if (!j.next) return out;
-  }
-}
-
 if (args.has('--list')) {
-  const jobs = await allJobs();
-  console.log(`${jobs.count ?? jobs.length} jobs\n`);
+  const { rows: jobs, count, complete } = await fetchAll('jobs/');
+  console.log(`${jobs.length} jobs${complete ? '' : ` (Manatal reports ${count}; ${count - jobs.length} are not being returned by the list)`}\n`);
   for (const j of jobs) {
     console.log(`${String(j.id).padEnd(9)} ${j.is_published ? 'LIVE ' : 'draft'} ${(j.city || '-') + ', ' + (j.state || '-')}`.padEnd(45) + j.position_name);
     console.log(`          ${j.career_page_url}`);
@@ -60,7 +44,7 @@ posts.forEach((p, i) => {
   if (!p.description) return;
   const d = p.description;
   if (!d.includes('1099')) problems.push(`${where}: description never says 1099`);
-  if (!/commission/i.test(d)) problems.push(`${where}: no commission word — a board validator will reject it`);
+  if (!/independent[- ]contractor/i.test(d) || !/\bcontract\b/i.test(d)) problems.push(`${where}: never says the role is paid under an independent contractor (1099) contract`);
   if (!/NPN/i.test(d)) problems.push(`${where}: compliance footer is missing`);
   if (!d.includes('<h3>')) problems.push(`${where}: no <h3> sections — see reference/writing-standard.md`);
   if (p.city && new RegExp(p.city, 'i').test(p.title)) problems.push(`${where}: city belongs in the city field, not the title`);
@@ -73,7 +57,11 @@ if (problems.length) {
 }
 
 // ── dedupe against what already exists ───────────────────────────────
-const existing = await allJobs();
+const { rows: existing, count: existingCount, complete: listComplete } = await fetchAll('jobs/');
+if (!listComplete) {
+  console.error(`Manatal reports ${existingCount} jobs but the list returned only ${existing.length}, so the duplicate check can't be trusted. Refusing to create anything.`);
+  process.exit(1);
+}
 const seen = new Set(existing.map((j) => `${j.position_name}|${j.city || ''}`.toLowerCase()));
 const fresh = posts.filter((p) => !seen.has(`${p.title}|${p.city || ''}`.toLowerCase()));
 const skipped = posts.length - fresh.length;
@@ -104,7 +92,7 @@ for (let i = 0; i < fresh.length; i += 5) {
         country: p.country || 'United States',
         is_remote: p.is_remote !== false,
         is_published: PUBLISH,
-        contract_details: p.contract_details || 'full_time',
+        contract_details: p.contract_details || 'contractor',
         currency: 'USD',
         headcount: p.headcount || 1,
       }),
@@ -116,7 +104,7 @@ for (let i = 0; i < fresh.length; i += 5) {
     if (r.error) console.log(`  FAILED  ${r.title}: ${r.error}`);
     else { created.push(r); console.log(`  ok      ${r.position_name} -> ${r.career_page_url}`); }
   }
-  if (i + 5 < fresh.length) await new Promise((r) => setTimeout(r, 1200));
+  if (i + 5 < fresh.length) await pause(1200);
 }
 
 console.log(`\n${created.length} created${PUBLISH ? ' and live' : ' as drafts (publish them in Manatal or re-run with --publish)'}.`);

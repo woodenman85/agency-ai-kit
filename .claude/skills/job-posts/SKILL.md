@@ -18,6 +18,10 @@ organization — and, if the agency uses Manatal, publish them through its API.
 3. If the user has Manatal, confirm the token works: `node scripts/check-manatal.mjs`.
    It prints the organization id and current job count. If it fails, fix setup before
    writing postings you cannot publish.
+4. Read "Free job-board restriction" in `reference/manatal-api.md`. This account's free
+   job-board access has been restricted over compensation wording, and the question of
+   whether a production-based 1099 role is eligible at all is still open. After any
+   batch, run `node scripts/audit-manatal.mjs`.
 
 ## The two rulebooks — read both before writing
 
@@ -83,8 +87,10 @@ when it's actually relevant — not as a pitch on every posting run.
   a real careers page that real candidates see and that Google indexes.
 - Every description ends with the compliance footer. No exceptions, including edits.
 - Every description states the role is 100% remote if it is (Google for Jobs requires
-  the disclosure), contains the literal string `1099`, and contains an explicit
-  commission word. Job-board validators match those tokens.
+  the disclosure), contains the literal string `1099`, and says earnings are based on
+  individual production. Never write "commission-only", "commission-based", or "no
+  salary or hourly pay" — Manatal's Trust & Safety team scans for that wording. The
+  structure is still disclosed; never obscure it.
 - Never put a city in the job title. City goes in the `city` / `state` fields.
 - Duplicate detection: `post-jobs.mjs` skips a posting whose title + city already
   exists in the account. Do not defeat that check by renaming.
@@ -95,3 +101,73 @@ when it's actually relevant — not as a pitch on every posting run.
 state, and career-page URL. To change one, PATCH it — see `reference/manatal-api.md`.
 Unpublishing is `{"is_published": false}`; it is reversible. Deleting is not — confirm
 with the user first, every time.
+
+`node scripts/prune-jobs.mjs` does this safely: dry run by default, selects by `--ids`
+or `--title`, and takes `--unpublish`, `--republish`, or `--delete`. Go in that order —
+unpublish, then republish to force a re-render, and delete only when the stale text
+survives both. `--delete` needs `--live --confirm-delete`, saves the full records to
+`deleted-jobs-*.json` first, and refuses any job that has applicants (Manatal may delete a
+job's applications with it) unless you add `--include-applicants`, or any LIVE job unless you add
+`--include-live`. Selectors besides `--ids` and `--title`: `--clone-drafts` (unpublished jobs with a
+city), `--duplicate-cities` (every LIVE posting in a city except the lowest live id), `--in-states
+"Hawaii,NY,AK"`, and `--oldest-city-jobs N` (the N oldest LIVE city postings) and `--created-before YYYY-MM-DD`
+(every city posting created before that UTC date, live or not, so the same batch can be unpublished and
+then deleted); templates have no city, so they are never picked. `--publish` is a fourth action, for drafts Manatal created unpublished;
+with `--clone-drafts` it skips a draft whose city already has a live posting, so deliberate extras
+stay unpublished. Without `--rotate`, an unpublished posting still counts as that city's posting, so
+`clone-jobs` does not reuse the city; with `--rotate` a city comes back once nothing in it is live. Rotate out old postings by unpublishing (reversible, keeps applicants); applicants
+block deleting, because Manatal may delete their applications with the job.
+
+`node scripts/clone-jobs.mjs` copies the reviewed template postings (the jobs with no city) to
+more cities word for word; dry run by default, `--live` to create, `--publish` to make them
+public. One posting per city, ever: any city that already has a posting under any title is
+skipped, and a city's template is fixed by its place in the city list, so reruns and
+`--exclude-states "Hawaii,NY,AK"` (names or two-letter codes) never shuffle or double up. It
+refuses to clone a template containing flagged wording, and refuses to create anything if the
+job list is incomplete (the duplicate check can't be trusted).
+
+**City renames.** Manatal may store a city under another name (it stored "South Burlington" as "Burlington").
+`clone-jobs` treats the names in `scripts/city-aliases.json` and the learned `city-aliases.local.json` as the
+same place, and after each run re-reads what it created and records any rename it finds. After a wave, check
+`status-manatal.mjs` for "Cities with more than one LIVE posting".
+
+**Rotation (reusing cities).** `node scripts/clone-jobs.mjs --rotate --next 100 --cities-file
+scripts/cities-all.json --titles-file scripts/titles-2.json` (add `--live --publish` to create) picks cities
+that have no LIVE posting: never-posted cities first, then the oldest batch of previously posted ones, spread
+across states, shuffled with a seed (today's date, or `--seed X`, so a preview and the live run match). A
+reused city never gets the title of its previous posting, and no city ever has two live postings.
+`scripts/cities-all.json` is 925 cities across 47 states (no HI/AK/NY). Rotate old postings out with
+`prune-jobs --created-before DATE --unpublish`; do not delete them, because deleting a job may delete its applications.
+
+**Regular waves.** `--next N` takes the next N cities in the list that have no posting yet, so every
+wave is the same command; `--titles-file scripts/titles-2.json` gives the templates new titles
+while the approved bodies are copied untouched (every template must be mapped, or it refuses);
+`scripts/cities-2.json`, `cities-3.json` and `cities-4.json` are 100 more cities each, in random order, with no overlap between any of the pools. `scripts/cities-5.json` is a 630-city master list, balanced across states, for every wave from here on: `--next 100 --cities-file scripts/cities-5.json` takes the next 100 cities with no posting in the live account, so it is the same command every time. A city listed twice in a file is used once. Do not create other files named `cities-N.json` by hand, because they collide with the ones in the repo. A wave is: dry run, show the user the
+plan, wait for a yes, then `--live --publish`, then `node scripts/audit-manatal.mjs`. When the
+list says every city has a posting, add more cities with `--cities-file`.
+
+`node scripts/edit-jobs.mjs` finds and replaces text in descriptions; select jobs with `--ids`, `--title`, or
+`--created-after YYYY-MM-DD` (every city posting created on or after that UTC date; `prune-jobs` takes the same flag) (dry run by default,
+`--live` to write) and reads every record back to confirm the edit landed. Prefer fixing
+text over deleting a posting.
+
+`node scripts/edit-organization.mjs` does the same find-and-replace on the company profile
+(the "about us" text shown beside every listing), with a dry run first.
+
+`bash scripts/fix-compensation.sh [YYYY-MM-DD]` is the one-command repair for the 2026-11 incident: it replaces three versions of
+the commission-based sentence on every city posting created on or after the date, restores template text, unpublishes extra
+live copies of a city, then audits. It writes to Manatal, stops at the first failing step, and is safe to run twice.
+
+`node scripts/sync-descriptions.mjs --titles-file scripts/titles-2.json` makes every city posting's description match
+its approved template word for word (dry run first, `--live` to write, each job read back). Run it whenever
+`status-manatal.mjs` reports postings whose text differs from their template. It never edits the templates and
+refuses to run if a template contains flagged wording.
+
+`node scripts/status-manatal.mjs` is the read-only snapshot to paste into a chat: templates, live
+and draft postings by title, repeated cities, postings in states the user excluded, cities left in
+each pool, the fields the API exposes on a job, recent applicants by day and source, and applications per
+posting grouped by the day the posting was created (counts only), which shows whether old postings still earn applicants.
+
+`node scripts/audit-manatal.mjs` is the read-only check: it scans every job and the
+company profile for the flagged wording, and exits non-zero if anything is flagged or
+the scan was incomplete.
